@@ -151,14 +151,188 @@ Networking enables communication between computers. For backend engineers:
 
 ## Application Layer Protocols
 
+### Before HTTP: The Early Internet
+
+**What Existed Before HTTP?**
+
+Before the World Wide Web and HTTP, the internet was primarily used by academics, researchers, and the military. Here's what they used:
+
+**1. FTP (File Transfer Protocol) - 1971**
+- **Purpose**: Transfer files between computers
+- **How it worked**: 
+  - Required separate control and data connections
+  - Two ports: Port 21 (commands) and Port 20 (data)
+  - User had to know exact file paths
+- **Example**:
+  ```
+  ftp ftp.example.com
+  Username: anonymous
+  Password: user@example.com
+  ftp> cd /pub/documents
+  ftp> get report.txt
+  ```
+- **Problem**: Not user-friendly, required technical knowledge
+- **Still used today**: Yes, for bulk file transfers (though SFTP/FTPS more common)
+
+**2. Gopher (1991)**
+- **Created by**: University of Minnesota (named after school mascot)
+- **Purpose**: Menu-driven document retrieval system
+- **How it worked**:
+  - Hierarchical menu structure
+  - Text-based interface
+  - Each item had a type (document, directory, search, etc.)
+- **Example menu**:
+  ```
+  1. About the University
+  2. Academic Departments/
+  3. Research Papers/
+  4. Campus Map
+  5. Search University Resources
+  ```
+- **Why it failed**: HTTP/Web was more flexible and easier to use
+- **Legacy**: Inspired early web browsers
+
+**3. Telnet (1969)**
+- **Purpose**: Remote terminal access to another computer
+- **How it worked**: 
+  - Login to remote system
+  - Execute commands as if sitting at that computer
+- **Example**:
+  ```
+  telnet mainframe.university.edu
+  Login: student123
+  Password: ********
+  $ ls
+  $ cd documents
+  $ cat thesis.txt
+  ```
+- **Problem**: No security (sent passwords in plaintext)
+- **Replaced by**: SSH (Secure Shell)
+
+**4. USENET (1979)**
+- **Purpose**: Distributed discussion system (like Reddit before the web)
+- **How it worked**:
+  - Newsgroups organized by topic (comp.*, sci.*, rec.*)
+  - Messages propagated between servers
+  - Users needed special client software (newsreaders)
+- **Example newsgroups**:
+  - `comp.lang.python` - Python programming discussions
+  - `sci.physics` - Physics discussions
+  - `rec.music.rock` - Rock music discussions
+- **Why important**: First large-scale online communities
+
+**5. Email (SMTP - 1982)**
+- **Purpose**: Electronic mail
+- **Protocols**: SMTP (sending), POP3/IMAP (receiving)
+- **How it worked**: Similar to today's email
+- **Still dominant**: Yes, email predates the web and is still essential
+
+**6. Archie (1990)**
+- **Purpose**: First search engine (for FTP sites)
+- **How it worked**: 
+  - Indexed filenames from FTP servers
+  - Users could search for files
+  - Then manually FTP to download
+- **Limitation**: Only searched filenames, not content
+
+**7. WAIS (Wide Area Information Server - 1991)**
+- **Purpose**: Search and retrieve documents
+- **How it worked**: Full-text search across databases
+- **Problem**: Complex, required special software
+
+### The Birth of HTTP: Why Was It Created?
+
+**The Problem (Late 1980s)**:
+
+Tim Berners-Lee was working at CERN (European physics lab) and noticed:
+1. **Information scattered everywhere**: Different computers, different formats
+2. **Hard to share research**: Researchers used different systems
+3. **No linking**: Couldn't reference one document from another
+4. **Steep learning curve**: Each system (FTP, Gopher, etc.) had different commands
+
+**The Vision (1989)**:
+
+Berners-Lee proposed a "hypertext" system where:
+- Documents could link to other documents
+- Works across different computers
+- Simple enough for non-programmers
+- Universal access through standard protocol
+
+**What He Invented (1989-1991)**:
+
+1. **HTML (HyperText Markup Language)**: Document format with links
+2. **HTTP (HyperText Transfer Protocol)**: Simple protocol to request/send documents
+3. **URL (Uniform Resource Locator)**: Addressing scheme for resources
+4. **First web browser/editor**: WorldWideWeb (later renamed Nexus)
+5. **First web server**: HTTP daemon
+
+**Why HTTP Was Revolutionary**:
+
+| Feature | Before HTTP | With HTTP |
+|---------|-------------|-----------|
+| **Simplicity** | Complex commands | Simple GET/POST |
+| **Linking** | None | Hyperlinks everywhere |
+| **Media** | Text only | Images, multimedia |
+| **Navigation** | Know exact paths | Click links |
+| **Discovery** | Search filenames | Search content, browse |
+| **Learning curve** | High (technical) | Low (anyone can use) |
+
+**The First HTTP Request (1991)**:
+
+```
+GET /hypertext/WWW/TheProject.html
+```
+
+That's it! No headers, no version number, just GET and the path.
+
+**Why It Succeeded Where Others Failed**:
+
+1. **Simplicity**: One protocol, easy to implement
+2. **Hyperlinks**: Revolutionary way to navigate information
+3. **Open standard**: Free for anyone to use
+4. **Multimedia**: Could embed images, not just text
+5. **User-friendly**: Point and click instead of typing commands
+6. **Backwards compatible**: Could coexist with FTP, Gopher, etc.
+
+**Timeline of Adoption**:
+
+- **1991**: First web server at CERN
+- **1993**: Mosaic browser (first graphical browser) released - explosive growth
+- **1994**: Netscape Navigator - made web mainstream
+- **1995**: Internet Explorer - browser wars begin
+- **1996**: HTTP/1.0 standardized (RFC 1945)
+- **1997**: HTTP/1.1 standardized (RFC 2068) - still widely used today
+
+---
+
 ### HTTP (Hypertext Transfer Protocol)
 
 **History**:
-- **HTTP/0.9 (1991)**: Only GET method, no headers
-- **HTTP/1.0 (1996)**: Added headers, POST, status codes
-- **HTTP/1.1 (1997)**: Persistent connections, chunked transfer
-- **HTTP/2 (2015)**: Binary protocol, multiplexing, server push
-- **HTTP/3 (2020)**: Based on QUIC (UDP), faster handshake
+- **HTTP/0.9 (1991)**: Only supported the GET method and did **not use headers**.  
+  *What does "no headers" mean?*  
+  In HTTP/0.9, a client (like a web browser) could only request a web page using a very simple command, such as `GET /index.html`. The server would respond by sending back just the raw HTML content—nothing else.  
+  **Consequences:**  
+  - No way to send extra information (like what type of browser is making the request, or what language is preferred).
+  - No status codes (like 404 Not Found or 200 OK), so clients couldn't easily tell if something went wrong.
+  - No way to specify content type, caching, cookies, or authentication.
+  - Only simple web pages could be served; no images, scripts, or stylesheets in a single request.
+
+- **HTTP/1.0 (1996)**: Introduced headers, POST method, and status codes.  
+  *Headers* are key-value pairs sent with requests and responses, allowing clients and servers to exchange extra information (like content type, length, cookies, etc.).  
+  **Improvements:**  
+  - Clients and servers could communicate more details (e.g., what type of content is being sent, how to cache it, etc.).
+  - Status codes (like 404, 200) made error handling possible.
+  - POST method allowed sending data to the server (e.g., submitting forms).
+
+- **HTTP/1.1 (1997)**: Added persistent connections (keep-alive), chunked transfer encoding, and more.  
+  - Multiple requests could use the same connection, improving speed.
+  - Chunked transfer allowed sending data in pieces, useful for streaming.
+
+- **HTTP/2 (2015)**: Switched to a binary protocol, introduced multiplexing (multiple requests in parallel over one connection), and server push (server can send resources before the client asks).  
+  - Faster and more efficient, especially for modern web pages with many resources.
+
+- **HTTP/3 (2020)**: Built on QUIC (uses UDP instead of TCP), enabling faster handshakes and better performance on unreliable networks.  
+  - Reduces latency and improves speed, especially on mobile and high-latency connections.
 
 **HTTP/1.1 Request/Response**:
 
@@ -219,6 +393,787 @@ Cache-Control: max-age=3600
   503 Service Unavailable
   504 Gateway Timeout
 ```
+
+---
+
+### HTTP Headers: Deep Dive
+
+Headers are key-value pairs that provide additional information about the request or response. They enable crucial features like caching, authentication, content negotiation, and security.
+
+**Header Anatomy**:
+```
+Header-Name: Header-Value
+```
+
+Headers are case-insensitive but conventionally written in Title-Case (e.g., `Content-Type`, not `content-type`).
+
+---
+
+#### 1. General Headers (Used in Both Requests and Responses)
+
+**Cache-Control**
+- **Purpose**: Controls caching behavior
+- **Direction**: Request & Response
+- **Common Values**:
+  - `no-cache`: Must revalidate with server before using cached copy
+  - `no-store`: Never cache this (sensitive data)
+  - `max-age=3600`: Cache for 3600 seconds (1 hour)
+  - `public`: Can be cached by any cache (browser, CDN)
+  - `private`: Only browser can cache (not shared caches like CDN)
+  - `must-revalidate`: Must check with server if cache expired
+
+**Example**:
+```http
+# Response telling browser to cache for 1 day
+Cache-Control: public, max-age=86400
+
+# Response for sensitive data (banking info)
+Cache-Control: no-store, no-cache, must-revalidate
+
+# Request forcing fresh data
+Cache-Control: no-cache
+```
+
+**Real-world Impact**:
+- Static assets (CSS, JS, images): `max-age=31536000` (1 year) - huge performance boost
+- API responses: `no-cache` or `max-age=60` (1 minute) - balance freshness and performance
+- Sensitive data: `no-store` - security requirement
+
+---
+
+**Connection**
+- **Purpose**: Controls whether network connection stays open
+- **Values**:
+  - `keep-alive`: Reuse connection for multiple requests (HTTP/1.1 default)
+  - `close`: Close after this request/response
+
+**Example**:
+```http
+Connection: keep-alive
+```
+
+**Why It Matters**:
+- **Without keep-alive**: Each request = new TCP handshake (3-way) = 100ms overhead
+- **With keep-alive**: Reuse connection = save 100ms per request
+- **Impact**: For a page with 50 resources, saves 5 seconds!
+
+---
+
+**Date**
+- **Purpose**: When the message was sent
+- **Format**: RFC 7231 format
+
+**Example**:
+```http
+Date: Tue, 02 Feb 2026 14:30:00 GMT
+```
+
+---
+
+#### 2. Request Headers (Sent by Client)
+
+**Host** ⭐ (Required in HTTP/1.1)
+- **Purpose**: Specifies domain name and port of the server
+- **Why Required**: Multiple websites can share same IP (virtual hosting)
+
+**Example**:
+```http
+Host: www.example.com
+Host: api.github.com:443
+```
+
+**Real-world scenario**:
+```
+Server IP: 192.168.1.100
+  ├─ Host: site1.com → Serves Site 1
+  ├─ Host: site2.com → Serves Site 2
+  └─ Host: blog.example.com → Serves Blog
+
+Without Host header, server wouldn't know which site to serve!
+```
+
+---
+
+**User-Agent**
+- **Purpose**: Identifies the client (browser, app, bot)
+- **Used for**: Browser detection, analytics, bot filtering
+
+**Examples**:
+```http
+# Chrome on Windows
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
+
+# iPhone Safari
+User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1
+
+# cURL
+User-Agent: curl/7.68.0
+
+# Python requests
+User-Agent: python-requests/2.28.1
+
+# Googlebot
+User-Agent: Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)
+```
+
+**Why It Matters**:
+- **Responsive design**: Server can send mobile-optimized HTML
+- **Analytics**: Track browser/OS distribution
+- **Security**: Block malicious bots
+- **Compatibility**: Serve different code for different browsers
+
+---
+
+**Accept**
+- **Purpose**: Tells server what content types client can handle
+- **Format**: MIME types with optional quality values (q=0.0 to 1.0)
+
+**Examples**:
+```http
+# Browser requesting HTML
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+
+# API client requesting JSON
+Accept: application/json
+
+# Client that prefers JSON but accepts XML
+Accept: application/json, application/xml;q=0.9
+
+# Image request
+Accept: image/webp,image/apng,image/*,*/*;q=0.8
+```
+
+**Content Negotiation**:
+```http
+# Client request
+Accept: application/json, application/xml;q=0.5
+
+# Server can respond with either:
+Content-Type: application/json  (preferred)
+# or
+Content-Type: application/xml   (if JSON not available)
+```
+
+---
+
+**Accept-Encoding**
+- **Purpose**: Compression algorithms client supports
+- **Common Values**: `gzip`, `deflate`, `br` (Brotli), `zstd`
+
+**Example**:
+```http
+Accept-Encoding: gzip, deflate, br
+```
+
+**Impact**:
+```
+Original HTML: 500 KB
+Gzipped:       100 KB  (80% reduction!)
+Brotli:        85 KB   (83% reduction!)
+
+Result: 5x faster download, less bandwidth cost
+```
+
+---
+
+**Accept-Language**
+- **Purpose**: Preferred language(s) for response
+- **Format**: Language codes with quality values
+
+**Examples**:
+```http
+# Prefer English, accept Spanish
+Accept-Language: en-US,en;q=0.9,es;q=0.8
+
+# German only
+Accept-Language: de-DE
+
+# French (France), then French (Canada), then English
+Accept-Language: fr-FR,fr-CA;q=0.9,en;q=0.8
+```
+
+**Server Response**:
+```http
+Content-Language: en-US
+```
+
+---
+
+**Authorization**
+- **Purpose**: Credentials for authentication
+- **Common Schemes**: 
+  - `Basic`: Base64-encoded username:password (insecure without HTTPS!)
+  - `Bearer`: Token-based (JWT, OAuth)
+  - `Digest`: Hash-based authentication
+
+**Examples**:
+```http
+# Basic authentication
+Authorization: Basic dXNlcjpwYXNzd29yZA==
+# (Base64 of "user:password")
+
+# Bearer token (JWT, OAuth 2.0)
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+# API Key
+Authorization: ApiKey abc123def456
+```
+
+**Security Warning**:
+```http
+# ❌ NEVER use Basic auth over HTTP (unencrypted)!
+HTTP + Basic Auth = Password sent in clear text!
+
+# ✅ Always use HTTPS
+HTTPS + Basic Auth = Encrypted, reasonably secure
+HTTPS + Bearer Token = Standard for APIs
+```
+
+---
+
+**Cookie**
+- **Purpose**: Send cookies previously set by server
+- **Format**: Semicolon-separated name=value pairs
+
+**Example**:
+```http
+Cookie: sessionId=abc123; userId=456; theme=dark
+```
+
+**Flow**:
+```
+1. First visit:
+   Client → Server: (no Cookie header)
+   Server → Client: Set-Cookie: sessionId=xyz789
+
+2. Subsequent visits:
+   Client → Server: Cookie: sessionId=xyz789
+   Server: "I know you! You're user 123"
+```
+
+---
+
+**Referer** (note: misspelled in spec, but that's the official spelling)
+- **Purpose**: URL of the page that linked to current request
+- **Privacy**: Can leak sensitive info, some browsers limit it
+
+**Example**:
+```http
+Referer: https://www.google.com/search?q=http+headers
+```
+
+**Use Cases**:
+- **Analytics**: "Where did this visitor come from?"
+- **Security**: Check if request came from your own site
+- **Conditional content**: Show different content based on referrer
+
+---
+
+**If-Modified-Since**
+- **Purpose**: Conditional request - only send if modified after this date
+- **Pair**: Works with response header `Last-Modified`
+
+**Example**:
+```http
+# Client has cached version from Jan 1st
+If-Modified-Since: Sun, 01 Jan 2026 00:00:00 GMT
+
+# Server response if NOT modified:
+HTTP/1.1 304 Not Modified
+(no body, use cached version)
+
+# Server response if modified:
+HTTP/1.1 200 OK
+Last-Modified: Mon, 02 Feb 2026 10:00:00 GMT
+(sends new content)
+```
+
+**Bandwidth Savings**:
+```
+Without conditional request:
+Client downloads 2 MB file every time
+
+With If-Modified-Since:
+First time: 2 MB
+Subsequent times (if unchanged): 304 response (few bytes)
+Savings: 99.9% bandwidth for static assets!
+```
+
+---
+
+**If-None-Match**
+- **Purpose**: Conditional request using ETags (entity tags)
+- **ETag**: Unique identifier for specific version of resource (like a hash)
+
+**Example**:
+```http
+# Client has cached version with this ETag
+If-None-Match: "33a64df551425fcc55e4d42a148795d9f25f89d4"
+
+# Server response if ETag matches (not modified):
+HTTP/1.1 304 Not Modified
+ETag: "33a64df551425fcc55e4d42a148795d9f25f89d4"
+
+# Server response if different ETag (modified):
+HTTP/1.1 200 OK
+ETag: "7d793037a0760186574b0282f2f435e7"
+(sends new content)
+```
+
+**ETag vs Last-Modified**:
+- **Last-Modified**: Date-based, 1-second precision
+- **ETag**: Content-based, detects any change
+- **Use ETag when**: Content can change multiple times per second
+
+---
+
+**Range**
+- **Purpose**: Request only part of a resource (resume downloads, streaming)
+- **Format**: `bytes=start-end`
+
+**Examples**:
+```http
+# Request first 1000 bytes
+Range: bytes=0-999
+
+# Request bytes 1000-1999
+Range: bytes=1000-1999
+
+# Request from byte 1000 to end
+Range: bytes=1000-
+
+# Request last 500 bytes
+Range: bytes=-500
+
+# Request multiple ranges
+Range: bytes=0-499, 1000-1499
+```
+
+**Response**:
+```http
+HTTP/1.1 206 Partial Content
+Content-Range: bytes 0-999/5000
+Content-Length: 1000
+
+(first 1000 bytes of content)
+```
+
+**Use Cases**:
+- **Resume downloads**: Download interrupted at 70%? Resume from 70%
+- **Video streaming**: Netflix downloads chunks as you watch
+- **PDF preview**: Load first page without downloading entire file
+
+---
+
+#### 3. Response Headers (Sent by Server)
+
+**Content-Type**
+- **Purpose**: What type of data is being sent
+- **Format**: MIME type + optional charset
+
+**Examples**:
+```http
+# HTML page
+Content-Type: text/html; charset=UTF-8
+
+# JSON API response
+Content-Type: application/json
+
+# JPEG image
+Content-Type: image/jpeg
+
+# PDF document
+Content-Type: application/pdf
+
+# Plain text
+Content-Type: text/plain; charset=UTF-8
+
+# CSS stylesheet
+Content-Type: text/css
+
+# JavaScript
+Content-Type: application/javascript
+
+# Video
+Content-Type: video/mp4
+
+# Form data
+Content-Type: application/x-www-form-urlencoded
+Content-Type: multipart/form-data
+```
+
+**Why Critical**:
+```http
+# ❌ Wrong Content-Type
+Content-Type: text/plain
+{"name": "John"}
+→ Browser displays as text, not parsed as JSON
+
+# ✅ Correct Content-Type
+Content-Type: application/json
+{"name": "John"}
+→ JavaScript can parse: JSON.parse(response)
+```
+
+---
+
+**Content-Length**
+- **Purpose**: Size of response body in bytes
+- **Required for**: Non-chunked responses
+
+**Example**:
+```http
+Content-Length: 1234
+```
+
+**Why It Matters**:
+- Client knows when full response received
+- Enables progress bars (downloaded 500/1234 bytes = 40%)
+- Connection can close at right time
+
+---
+
+**Content-Encoding**
+- **Purpose**: How the content is compressed
+- **Common Values**: `gzip`, `deflate`, `br` (Brotli)
+
+**Example**:
+```http
+Content-Encoding: gzip
+```
+
+**Flow**:
+```
+1. Client: Accept-Encoding: gzip, br
+2. Server: (compresses content with gzip)
+3. Server: Content-Encoding: gzip
+4. Client: (decompresses automatically)
+```
+
+---
+
+**Set-Cookie**
+- **Purpose**: Tell client to store a cookie
+- **Attributes**: 
+  - `Expires`: When cookie expires
+  - `Max-Age`: Seconds until expiration
+  - `Domain`: Which domains can access cookie
+  - `Path`: Which paths can access cookie
+  - `Secure`: Only send over HTTPS
+  - `HttpOnly`: Not accessible via JavaScript (XSS protection)
+  - `SameSite`: CSRF protection
+
+**Examples**:
+```http
+# Basic cookie
+Set-Cookie: sessionId=abc123
+
+# Cookie with expiration
+Set-Cookie: userId=456; Expires=Wed, 02 Feb 2027 07:28:00 GMT
+
+# Secure session cookie (best practice)
+Set-Cookie: sessionId=xyz789; Secure; HttpOnly; SameSite=Strict; Max-Age=3600
+
+# Multiple cookies
+Set-Cookie: theme=dark; Max-Age=31536000; Path=/
+Set-Cookie: lang=en; Max-Age=31536000; Path=/
+```
+
+**Security Attributes Explained**:
+```http
+# ❌ Vulnerable cookie
+Set-Cookie: sessionId=abc123
+→ Sent over HTTP (can be stolen)
+→ Accessible via JavaScript (XSS attack)
+→ Sent to other sites (CSRF attack)
+
+# ✅ Secure cookie
+Set-Cookie: sessionId=abc123; Secure; HttpOnly; SameSite=Strict
+→ Secure: Only sent over HTTPS
+→ HttpOnly: JavaScript can't access (prevents XSS)
+→ SameSite=Strict: Not sent to other sites (prevents CSRF)
+```
+
+---
+
+**Location**
+- **Purpose**: Redirect client to different URL
+- **Used with**: 3xx status codes (301, 302, 307, 308)
+
+**Examples**:
+```http
+# Permanent redirect (301)
+HTTP/1.1 301 Moved Permanently
+Location: https://www.example.com/new-page
+
+# Temporary redirect (302)
+HTTP/1.1 302 Found
+Location: https://www.example.com/login
+
+# After POST (303)
+HTTP/1.1 303 See Other
+Location: https://www.example.com/success
+```
+
+**Use Cases**:
+- **Old URL → New URL**: Site restructuring
+- **Login required**: Redirect to login page
+- **Post-Redirect-Get**: After form submission, redirect to prevent resubmit
+
+---
+
+**Last-Modified**
+- **Purpose**: When resource was last changed
+- **Pair**: Works with request header `If-Modified-Since`
+
+**Example**:
+```http
+Last-Modified: Mon, 01 Jan 2026 12:00:00 GMT
+```
+
+---
+
+**ETag**
+- **Purpose**: Unique identifier for resource version
+- **Pair**: Works with request header `If-None-Match`
+- **Generation**: Usually hash of content or version number
+
+**Examples**:
+```http
+# Strong ETag (exact match required)
+ETag: "33a64df551425fcc55e4d42a148795d9f25f89d4"
+
+# Weak ETag (semantically equivalent allowed)
+ETag: W/"0815"
+```
+
+**When to Use**:
+- **Strong**: Byte-for-byte comparison needed (downloads, APIs)
+- **Weak**: Minor differences OK (HTML with dynamic timestamp)
+
+---
+
+**Server**
+- **Purpose**: Identify server software
+- **Privacy**: Some sites hide this for security
+
+**Examples**:
+```http
+Server: nginx/1.21.0
+Server: Apache/2.4.41 (Ubuntu)
+Server: cloudflare
+Server: Microsoft-IIS/10.0
+```
+
+---
+
+**Strict-Transport-Security (HSTS)**
+- **Purpose**: Force HTTPS for specified time
+- **Security**: Prevents downgrade attacks
+
+**Example**:
+```http
+Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
+```
+
+**What It Does**:
+```
+First visit:
+Client: http://example.com
+Server: (redirects to HTTPS)
+Server: Strict-Transport-Security: max-age=31536000
+
+Future visits (for 1 year):
+Client: http://example.com
+Browser: "Wait, I'll use HTTPS directly!"
+→ Automatic upgrade to https://example.com
+→ Prevents man-in-the-middle attacks
+```
+
+---
+
+**X-Content-Type-Options**
+- **Purpose**: Prevent MIME type sniffing
+- **Security**: Stops browser from guessing content type
+
+**Example**:
+```http
+X-Content-Type-Options: nosniff
+```
+
+**Why It Matters**:
+```
+Without nosniff:
+Content-Type: text/plain
+<script>alert('XSS')</script>
+→ Old browsers might execute as JavaScript!
+
+With nosniff:
+X-Content-Type-Options: nosniff
+Content-Type: text/plain
+<script>alert('XSS')</script>
+→ Browser refuses to execute, treats as plain text
+```
+
+---
+
+**X-Frame-Options**
+- **Purpose**: Prevent clickjacking attacks
+- **Values**: 
+  - `DENY`: Never allow framing
+  - `SAMEORIGIN`: Only allow same origin
+  - `ALLOW-FROM uri`: Allow specific origin
+
+**Example**:
+```http
+X-Frame-Options: DENY
+```
+
+**Clickjacking Prevention**:
+```
+Attacker's site:
+<iframe src="https://bank.com/transfer?to=attacker&amount=1000">
+→ Invisible iframe overlaid on fake button
+→ User thinks they're clicking "Download Free Game"
+→ Actually clicking "Transfer Money" in hidden iframe
+
+With X-Frame-Options: DENY
+→ Browser refuses to load bank.com in iframe
+→ Attack prevented!
+```
+
+---
+
+**Content-Security-Policy (CSP)**
+- **Purpose**: Control what resources can load (XSS prevention)
+- **Powerful**: Can whitelist scripts, styles, images, etc.
+
+**Examples**:
+```http
+# Only allow resources from same origin
+Content-Security-Policy: default-src 'self'
+
+# Allow scripts from CDN
+Content-Security-Policy: script-src 'self' https://cdn.example.com
+
+# Comprehensive policy
+Content-Security-Policy: default-src 'self'; script-src 'self' https://apis.google.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' https://fonts.gstatic.com
+```
+
+**XSS Prevention**:
+```
+Without CSP:
+→ Attacker injects: <script src="https://evil.com/steal.js"></script>
+→ Browser executes malicious script
+→ Cookies stolen, session hijacked
+
+With CSP: script-src 'self'
+→ Browser refuses to load evil.com script
+→ Only scripts from same origin allowed
+→ Attack blocked!
+```
+
+---
+
+**Access-Control-Allow-Origin (CORS)**
+- **Purpose**: Allow cross-origin requests
+- **Security**: Browsers block cross-origin requests by default
+
+**Examples**:
+```http
+# Allow specific origin
+Access-Control-Allow-Origin: https://www.example.com
+
+# Allow all origins (use cautiously!)
+Access-Control-Allow-Origin: *
+
+# Allow credentials (cookies, auth headers)
+Access-Control-Allow-Origin: https://www.example.com
+Access-Control-Allow-Credentials: true
+
+# Allow specific methods
+Access-Control-Allow-Methods: GET, POST, PUT, DELETE
+
+# Allow specific headers
+Access-Control-Allow-Headers: Content-Type, Authorization
+```
+
+**CORS Flow**:
+```
+1. Browser (on site-a.com):
+   Fetch('https://api.site-b.com/data')
+
+2. Browser sends preflight (OPTIONS request):
+   Origin: https://site-a.com
+
+3. Server (api.site-b.com) responds:
+   Access-Control-Allow-Origin: https://site-a.com
+   Access-Control-Allow-Methods: GET, POST
+
+4. Browser: "OK, site-a.com is allowed"
+   → Sends actual GET request
+
+5. If header missing or wrong origin:
+   → Browser blocks response
+   → Error: "No 'Access-Control-Allow-Origin' header"
+```
+
+---
+
+#### Complete Example: API Request with All Headers
+
+**Request**:
+```http
+POST /api/users HTTP/1.1
+Host: api.example.com
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0
+Accept: application/json
+Accept-Encoding: gzip, deflate, br
+Accept-Language: en-US,en;q=0.9
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+Content-Length: 58
+Cookie: sessionId=abc123; theme=dark
+Origin: https://www.example.com
+Referer: https://www.example.com/signup
+
+{"name": "John Doe", "email": "john@example.com"}
+```
+
+**Response**:
+```http
+HTTP/1.1 201 Created
+Date: Tue, 02 Feb 2026 14:30:00 GMT
+Server: nginx/1.21.0
+Content-Type: application/json; charset=UTF-8
+Content-Length: 156
+Content-Encoding: gzip
+Cache-Control: no-store
+Set-Cookie: userId=789; Secure; HttpOnly; SameSite=Strict; Max-Age=86400
+Access-Control-Allow-Origin: https://www.example.com
+Access-Control-Allow-Credentials: true
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+X-Content-Type-Options: nosniff
+X-Frame-Options: DENY
+Content-Security-Policy: default-src 'self'
+ETag: "33a64df551425fcc55e4d42a148795d9f25f89d4"
+Last-Modified: Tue, 02 Feb 2026 14:30:00 GMT
+
+{"id": 789, "name": "John Doe", "email": "john@example.com", "created_at": "2026-02-02T14:30:00Z"}
+```
+
+**Header Analysis**:
+1. ✅ **Authorization**: Bearer token for API authentication
+2. ✅ **Content-Type**: JSON request and response
+3. ✅ **Content-Encoding**: Response compressed with gzip (faster)
+4. ✅ **Cache-Control: no-store**: Don't cache sensitive user data
+5. ✅ **Set-Cookie**: Secure session cookie with all security flags
+6. ✅ **CORS headers**: Allow cross-origin request from www.example.com
+7. ✅ **Security headers**: HSTS, X-Content-Type-Options, X-Frame-Options, CSP
+8. ✅ **ETag**: For efficient caching/validation
+9. ✅ **201 Created**: Correct status for resource creation
+
+---
 
 ### HTTP/2 vs HTTP/1.1
 

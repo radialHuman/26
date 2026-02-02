@@ -492,6 +492,1067 @@ result = schema.execute(query)
 print(result.data)
 ```
 
+### GraphQL Implementation (Golang)
+
+To implement GraphQL in Go, you can use libraries such as [graphql-go/graphql](https://github.com/graphql-go/graphql) or [99designs/gqlgen](https://github.com/99designs/gqlgen). Here’s a simple example using `graphql-go/graphql`:
+
+**Install the library:**
+```bash
+go get github.com/graphql-go/graphql
+go get github.com/graphql-go/handler
+```
+
+**Define Schema and Resolvers:**
+```go
+package main
+
+import (
+    "encoding/json"
+    "log"
+    "net/http"
+
+    "github.com/graphql-go/graphql"
+    "github.com/graphql-go/handler"
+)
+
+// Define User type
+var userType = graphql.NewObject(graphql.ObjectConfig{
+    Name: "User",
+    Fields: graphql.Fields{
+        "id":    &graphql.Field{Type: graphql.Int},
+        "name":  &graphql.Field{Type: graphql.String},
+        "email": &graphql.Field{Type: graphql.String},
+    },
+})
+
+// Sample data
+var users = []map[string]interface{}{
+    {"id": 1, "name": "Alice", "email": "alice@example.com"},
+    {"id": 2, "name": "Bob", "email": "bob@example.com"},
+}
+
+// Define root query
+var rootQuery = graphql.NewObject(graphql.ObjectConfig{
+    Name: "Query",
+    Fields: graphql.Fields{
+        "user": &graphql.Field{
+            Type: userType,
+            Args: graphql.FieldConfigArgument{
+                "id": &graphql.ArgumentConfig{Type: graphql.Int},
+            },
+            Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+                id, ok :=-+-+-+-+-+
+### GraphQL Implementation (Golang)
+
+You can build GraphQL APIs in Go using libraries like [gqlgen](https://gqlgen.com/) or [graphql-go](https://github.com/graphql-go/graphql). Below is a minimal example using `gqlgen`, which generates type-safe code from a schema.
+
+**1. Install gqlgen:**
+```bash
+go install github.com/99designs/gqlgen@latest
+```
+
+**2. Initialize gqlgen in your project:**
+```bash
+go mod init github.com/example/graphql-demo
+gqlgen init
+```
+
+**3. Define your schema (`schema.graphqls`):**
+```graphql
+type User {
+  id: Int!
+  name: String!
+  email: String!
+}
+
+type Query {
+  user(id: Int!): User
+  users: [User!]!
+}
+```
+
+**4. Implement resolvers (`resolver.go`):**
+```go
+package graph
+
+type User struct {
+    ID    int
+    Name  string
+    Email string
+}
+
+var userList = []*User{
+    {ID: 1, Name: "Alice", Email: "alice@example.com"},
+    {ID: 2, Name: "Bob", Email: "bob@example.com"},
+}
+
+func (r *queryResolver) User(ctx context.Context, id int) (*User, error) {
+    for _, u := range userList {
+        if u.ID == id {
+            return u, nil
+        }
+    }
+    return nil, nil
+}
+
+func (r *queryResolver) Users(ctx context.Context) ([]*User, error) {
+    return userList, nil
+}
+```
+
+**5. Start the server:**
+```go
+package main
+
+import (
+    "log"
+    "net/http"
+    "github.com/99designs/gqlgen/graphql/handler"
+    "github.com/99designs/gqlgen/graphql/playground"
+    "yourmodule/graph"
+    "yourmodule/graph/generated"
+)
+
+func main() {
+    srv := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{Resolvers: &graph.Resolver{}}))
+    http.Handle("/graphql", srv)
+    http.Handle("/", playground.Handler("GraphQL playground", "/graphql"))
+    log.Println("Server running at http://localhost:8080/")
+    log.Fatal(http.ListenAndServe(":8080", nil))
+}
+```
+
+**6. Query Example:**
+```graphql
+query {
+  users {
+    id
+    name
+    email
+  }
+  user(id: 1) {
+    name
+    email
+  }
+}
+```
+
+This setup gives you a type-safe, production-ready GraphQL API in Go. For more advanced features, refer to the [gqlgen documentation](https://gqlgen.com/).
+
+
+---
+
+## gRPC
+
+### What is gRPC?
+
+**gRPC** (Google Remote Procedure Call): High-performance, open-source RPC framework developed by Google in 2015.
+
+**Historical Context - The Problem**:
+```
+Before gRPC (2010s):
+- REST APIs dominated but had limitations
+- JSON parsing was slow
+- HTTP/1.1 was inefficient for service-to-service communication
+- No built-in service contracts or type safety
+- Difficult to handle streaming data
+
+Google's internal systems used Stubby (their RPC framework) since 2001, handling 10+ billion requests/sec. They open-sourced the next generation as gRPC in 2015 to solve:
+1. Performance bottlenecks in microservices
+2. Need for strict API contracts
+3. Streaming requirements
+4. Multi-language support
+```
+
+**Key Characteristics**:
+```
+- Uses Protocol Buffers (protobuf) for serialization
+- Built on HTTP/2 (multiplexing, streaming)
+- Language-agnostic (supports 11+ languages)
+- Strictly typed contracts (.proto files)
+- 4 types of communication: Unary, Server Streaming, Client Streaming, Bidirectional Streaming
+- ~7-10x faster than REST+JSON for same data
+```
+
+### When to Use gRPC
+
+**Use Cases**:
+```
+✅ Microservices communication (internal services)
+✅ Real-time streaming (IoT, live data)
+✅ Mobile clients (low bandwidth, battery efficient)
+✅ Polyglot environments (multiple languages)
+✅ High-performance requirements
+✅ Strict API contracts needed
+✅ Point-to-point real-time communication
+```
+
+**Don't Use When**:
+```
+❌ Browser clients (limited browser support)
+❌ Public-facing APIs (REST is more universal)
+❌ Need human-readable payloads
+❌ Simple CRUD operations (REST is simpler)
+❌ No HTTP/2 support in infrastructure
+```
+
+### gRPC vs REST vs GraphQL
+
+| Feature | gRPC | REST | GraphQL |
+|---------|------|------|---------|
+| **Protocol** | HTTP/2 | HTTP/1.1/2 | HTTP |
+| **Data Format** | Protobuf (binary) | JSON (text) | JSON (text) |
+| **Schema** | Required (.proto) | Optional (OpenAPI) | Required (SDL) |
+| **Performance** | Very High | Medium | Medium |
+| **Streaming** | Native (4 types) | No (SSE only) | Limited |
+| **Browser Support** | Limited (needs proxy) | Excellent | Excellent |
+| **Learning Curve** | High | Low | Medium |
+| **Caching** | Complex | Built-in (HTTP) | Complex |
+| **Payload Size** | Small (binary) | Large (text) | Medium (text) |
+| **Type Safety** | Strong | Weak | Strong |
+
+### Pros & Cons
+
+**Pros**:
+```
+✅ Extremely fast (binary protobuf + HTTP/2)
+✅ Strong typing (compile-time errors)
+✅ Built-in code generation (client/server stubs)
+✅ Streaming support (all 4 types)
+✅ Bidirectional communication
+✅ Efficient network usage (small payloads)
+✅ Deadline/timeout propagation
+✅ Load balancing built-in
+✅ Multi-language support
+```
+
+**Cons**:
+```
+❌ Not human-readable (binary format)
+❌ Limited browser support (needs gRPC-Web proxy)
+❌ Steeper learning curve
+❌ Less tooling than REST (Postman, curl)
+❌ Harder to debug
+❌ Not firewall-friendly (some block HTTP/2)
+❌ Requires HTTP/2
+```
+
+### Cost & Trade-offs
+
+**Infrastructure Cost**:
+```
+Self-Hosted gRPC Server:
+- Same as REST (just a server)
+- AWS EC2 t3.small: ~$15/month
+- Google Cloud e2-small: ~$13/month
+
+Managed gRPC:
+- Google Cloud Run: $0.00002400/vCPU-second (pay per use)
+- AWS App Runner: $0.064/vCPU hour + $0.007/GB hour
+- Most managed services support gRPC automatically
+
+gRPC-Web Gateway (for browsers):
+- Envoy proxy: Free (self-hosted)
+- Nginx with grpc_pass: Free
+- Cloud load balancers with gRPC support: Included
+
+Development Cost:
+- Higher initial setup time (protobuf definitions)
+- Faster long-term development (type safety, code generation)
+- Better performance = lower infrastructure costs at scale
+```
+
+**Trade-offs**:
+```
+Performance vs Simplicity: gRPC is faster but more complex
+Type Safety vs Flexibility: Strict contracts vs easy changes
+Binary vs Readability: Efficient vs debuggable
+Streaming vs Simple: Powerful but complex
+```
+
+**When to Use What**:
+```
+Use gRPC when:
+- Internal microservices (biggest win)
+- Performance critical (trading, gaming, IoT)
+- Real-time bidirectional streaming needed
+- Multiple programming languages
+- Strong typing required
+
+Use REST when:
+- Public APIs
+- Browser clients (primary)
+- Simple CRUD
+- Easy debugging needed
+- Wide tool support important
+
+Use GraphQL when:
+- Complex, nested data fetching
+- Mobile apps (reduce requests)
+- Flexible querying needed
+- Rapid frontend development
+```
+
+### Protocol Buffers (Protobuf)
+
+**Schema Definition** (.proto file):
+```protobuf
+syntax = "proto3";
+
+package user;
+
+// Service definition
+service UserService {
+  // Unary RPC: single request, single response
+  rpc GetUser (GetUserRequest) returns (User) {}
+  
+  // Server streaming: single request, stream of responses
+  rpc ListUsers (ListUsersRequest) returns (stream User) {}
+  
+  // Client streaming: stream of requests, single response
+  rpc CreateUsers (stream CreateUserRequest) returns (CreateUsersResponse) {}
+  
+  // Bidirectional streaming
+  rpc ChatUsers (stream ChatMessage) returns (stream ChatMessage) {}
+}
+
+// Message definitions
+message User {
+  int64 id = 1;
+  string name = 2;
+  string email = 3;
+  int32 age = 4;
+  repeated string roles = 5;  // Array
+  Address address = 6;         // Nested message
+  google.protobuf.Timestamp created_at = 7;
+}
+
+message Address {
+  string street = 1;
+  string city = 2;
+  string country = 3;
+}
+
+message GetUserRequest {
+  int64 user_id = 1;
+}
+
+message ListUsersRequest {
+  int32 page = 1;
+  int32 page_size = 2;
+}
+
+message CreateUserRequest {
+  string name = 1;
+  string email = 2;
+}
+
+message CreateUsersResponse {
+  int32 created_count = 1;
+}
+
+message ChatMessage {
+  int64 user_id = 1;
+  string text = 2;
+  google.protobuf.Timestamp timestamp = 3;
+}
+```
+
+**Why Protobuf vs JSON**:
+```
+Protobuf advantages:
+- 3-10x smaller payloads
+- 20-100x faster serialization/deserialization
+- Strongly typed (compile-time validation)
+- Backward/forward compatible
+- Language-agnostic
+
+JSON advantages:
+- Human-readable
+- No schema required
+- Browser native
+- Easy debugging
+```
+
+### gRPC Implementation (Python)
+
+**Install**:
+```bash
+pip install grpcio grpcio-tools
+```
+
+**Generate Code from .proto**:
+```bash
+python -m grpc_tools.protoc -I. --python_out=. --grpc_python_out=. user.proto
+```
+
+**Server** (user_server.py):
+```python
+from concurrent import futures
+import grpc
+import user_pb2
+import user_pb2_grpc
+import time
+from datetime import datetime
+
+class UserServicer(user_pb2_grpc.UserServiceServicer):
+    """Implementation of UserService"""
+    
+    def __init__(self):
+        # Simulated database
+        self.users = {
+            1: {'id': 1, 'name': 'Alice', 'email': 'alice@example.com', 'age': 30},
+            2: {'id': 2, 'name': 'Bob', 'email': 'bob@example.com', 'age': 25},
+            3: {'id': 3, 'name': 'Charlie', 'email': 'charlie@example.com', 'age': 35},
+        }
+    
+    def GetUser(self, request, context):
+        """Unary RPC: Get single user"""
+        user_id = request.user_id
+        
+        if user_id not in self.users:
+            context.set_code(grpc.StatusCode.NOT_FOUND)
+            context.set_details(f'User {user_id} not found')
+            return user_pb2.User()
+        
+        user_data = self.users[user_id]
+        return user_pb2.User(
+            id=user_data['id'],
+            name=user_data['name'],
+            email=user_data['email'],
+            age=user_data['age']
+        )
+    
+    def ListUsers(self, request, context):
+        """Server streaming RPC: Stream all users"""
+        for user_data in self.users.values():
+            # Simulate delay
+            time.sleep(0.5)
+            
+            yield user_pb2.User(
+                id=user_data['id'],
+                name=user_data['name'],
+                email=user_data['email'],
+                age=user_data['age']
+            )
+    
+    def CreateUsers(self, request_iterator, context):
+        """Client streaming RPC: Create multiple users"""
+        created_count = 0
+        
+        for user_request in request_iterator:
+            user_id = len(self.users) + 1
+            self.users[user_id] = {
+                'id': user_id,
+                'name': user_request.name,
+                'email': user_request.email,
+                'age': 0
+            }
+            created_count += 1
+        
+        return user_pb2.CreateUsersResponse(created_count=created_count)
+    
+    def ChatUsers(self, request_iterator, context):
+        """Bidirectional streaming RPC: Chat"""
+        for message in request_iterator:
+            # Echo back with timestamp
+            response = user_pb2.ChatMessage(
+                user_id=message.user_id,
+                text=f"Echo: {message.text}",
+                timestamp=message.timestamp
+            )
+            yield response
+
+def serve():
+    # Create server
+    server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
+    
+    # Add servicer
+    user_pb2_grpc.add_UserServiceServicer_to_server(
+        UserServicer(), server
+    )
+    
+    # Bind to port
+    server.add_insecure_port('[::]:50051')
+    
+    print('Starting gRPC server on port 50051...')
+    server.start()
+    server.wait_for_termination()
+
+if __name__ == '__main__':
+    serve()
+```
+
+**Client** (user_client.py):
+```python
+import grpc
+import user_pb2
+import user_pb2_grpc
+
+def run():
+    # Create channel
+    with grpc.insecure_channel('localhost:50051') as channel:
+        # Create stub (client)
+        stub = user_pb2_grpc.UserServiceStub(channel)
+        
+        # 1. Unary RPC: Get single user
+        print("=== Unary RPC: GetUser ===")
+        try:
+            response = stub.GetUser(user_pb2.GetUserRequest(user_id=1))
+            print(f"User: {response.name}, Email: {response.email}")
+        except grpc.RpcError as e:
+            print(f"Error: {e.code()}: {e.details()}")
+        
+        # 2. Server streaming: List users
+        print("\n=== Server Streaming: ListUsers ===")
+        responses = stub.ListUsers(user_pb2.ListUsersRequest(page=1, page_size=10))
+        for user in responses:
+            print(f"User: {user.name}, Email: {user.email}")
+        
+        # 3. Client streaming: Create multiple users
+        print("\n=== Client Streaming: CreateUsers ===")
+        def create_requests():
+            users = [
+                {'name': 'David', 'email': 'david@example.com'},
+                {'name': 'Eve', 'email': 'eve@example.com'},
+                {'name': 'Frank', 'email': 'frank@example.com'},
+            ]
+            for user in users:
+                yield user_pb2.CreateUserRequest(name=user['name'], email=user['email'])
+        
+        response = stub.CreateUsers(create_requests())
+        print(f"Created {response.created_count} users")
+        
+        # 4. Bidirectional streaming: Chat
+        print("\n=== Bidirectional Streaming: ChatUsers ===")
+        def chat_messages():
+            messages = ["Hello", "How are you?", "Goodbye"]
+            for msg in messages:
+                yield user_pb2.ChatMessage(user_id=1, text=msg)
+        
+        responses = stub.ChatUsers(chat_messages())
+        for response in responses:
+            print(f"Response: {response.text}")
+
+if __name__ == '__main__':
+    run()
+```
+
+### gRPC Implementation (Go)
+
+**Install**:
+```bash
+go get google.golang.org/grpc
+go get google.golang.org/protobuf/cmd/protoc-gen-go
+go get google.golang.org/grpc/cmd/protoc-gen-go-grpc
+```
+
+**Generate Code**:
+```bash
+protoc --go_out=. --go-grpc_out=. user.proto
+```
+
+**Server** (server.go):
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "io"
+    "log"
+    "net"
+    "time"
+    
+    pb "path/to/generated/user"
+    "google.golang.org/grpc"
+    "google.golang.org/grpc/codes"
+    "google.golang.org/grpc/status"
+)
+
+type server struct {
+    pb.UnimplementedUserServiceServer
+    users map[int64]*pb.User
+}
+
+func newServer() *server {
+    return &server{
+        users: map[int64]*pb.User{
+            1: {Id: 1, Name: "Alice", Email: "alice@example.com", Age: 30},
+            2: {Id: 2, Name: "Bob", Email: "bob@example.com", Age: 25},
+            3: {Id: 3, Name: "Charlie", Email: "charlie@example.com", Age: 35},
+        },
+    }
+}
+
+// Unary RPC
+func (s *server) GetUser(ctx context.Context, req *pb.GetUserRequest) (*pb.User, error) {
+    user, exists := s.users[req.UserId]
+    if !exists {
+        return nil, status.Errorf(codes.NotFound, "user %d not found", req.UserId)
+    }
+    return user, nil
+}
+
+// Server streaming RPC
+func (s *server) ListUsers(req *pb.ListUsersRequest, stream pb.UserService_ListUsersServer) error {
+    for _, user := range s.users {
+        // Simulate delay
+        time.Sleep(500 * time.Millisecond)
+        
+        if err := stream.Send(user); err != nil {
+            return err
+        }
+    }
+    return nil
+}
+
+// Client streaming RPC
+func (s *server) CreateUsers(stream pb.UserService_CreateUsersServer) error {
+    createdCount := int32(0)
+    
+    for {
+        req, err := stream.Recv()
+        if err == io.EOF {
+            // Client finished sending
+            return stream.SendAndClose(&pb.CreateUsersResponse{
+                CreatedCount: createdCount,
+            })
+        }
+        if err != nil {
+            return err
+        }
+        
+        // Create user
+        userID := int64(len(s.users) + 1)
+        s.users[userID] = &pb.User{
+            Id:    userID,
+            Name:  req.Name,
+            Email: req.Email,
+        }
+        createdCount++
+    }
+}
+
+// Bidirectional streaming RPC
+func (s *server) ChatUsers(stream pb.UserService_ChatUsersServer) error {
+    for {
+        msg, err := stream.Recv()
+        if err == io.EOF {
+            return nil
+        }
+        if err != nil {
+            return err
+        }
+        
+        // Echo back
+        response := &pb.ChatMessage{
+            UserId: msg.UserId,
+            Text:   fmt.Sprintf("Echo: %s", msg.Text),
+        }
+        
+        if err := stream.Send(response); err != nil {
+            return err
+        }
+    }
+}
+
+func main() {
+    // Create listener
+    lis, err := net.Listen("tcp", ":50051")
+    if err != nil {
+        log.Fatalf("failed to listen: %v", err)
+    }
+    
+    // Create gRPC server
+    s := grpc.NewServer()
+    pb.RegisterUserServiceServer(s, newServer())
+    
+    log.Println("gRPC server listening on :50051")
+    if err := s.Serve(lis); err != nil {
+        log.Fatalf("failed to serve: %v", err)
+    }
+}
+```
+
+**Client** (client.go):
+```go
+package main
+
+import (
+    "context"
+    "io"
+    "log"
+    "time"
+    
+    pb "path/to/generated/user"
+    "google.golang.org/grpc"
+    "google.golang.org/grpc/credentials/insecure"
+)
+
+func main() {
+    // Connect to server
+    conn, err := grpc.Dial("localhost:50051", grpc.WithTransportCredentials(insecure.NewCredentials()))
+    if err != nil {
+        log.Fatalf("did not connect: %v", err)
+    }
+    defer conn.Close()
+    
+    client := pb.NewUserServiceClient(conn)
+    ctx := context.Background()
+    
+    // 1. Unary RPC
+    log.Println("=== Unary RPC: GetUser ===")
+    user, err := client.GetUser(ctx, &pb.GetUserRequest{UserId: 1})
+    if err != nil {
+        log.Printf("Error: %v", err)
+    } else {
+        log.Printf("User: %s, Email: %s", user.Name, user.Email)
+    }
+    
+    // 2. Server streaming
+    log.Println("\n=== Server Streaming: ListUsers ===")
+    stream, err := client.ListUsers(ctx, &pb.ListUsersRequest{Page: 1, PageSize: 10})
+    if err != nil {
+        log.Fatalf("ListUsers failed: %v", err)
+    }
+    
+    for {
+        user, err := stream.Recv()
+        if err == io.EOF {
+            break
+        }
+        if err != nil {
+            log.Fatalf("stream error: %v", err)
+        }
+        log.Printf("User: %s, Email: %s", user.Name, user.Email)
+    }
+    
+    // 3. Client streaming
+    log.Println("\n=== Client Streaming: CreateUsers ===")
+    createStream, err := client.CreateUsers(ctx)
+    if err != nil {
+        log.Fatalf("CreateUsers failed: %v", err)
+    }
+    
+    users := []struct {
+        name  string
+        email string
+    }{
+        {"David", "david@example.com"},
+        {"Eve", "eve@example.com"},
+        {"Frank", "frank@example.com"},
+    }
+    
+    for _, u := range users {
+        if err := createStream.Send(&pb.CreateUserRequest{
+            Name:  u.name,
+            Email: u.email,
+        }); err != nil {
+            log.Fatalf("send error: %v", err)
+        }
+    }
+    
+    response, err := createStream.CloseAndRecv()
+    if err != nil {
+        log.Fatalf("CloseAndRecv error: %v", err)
+    }
+    log.Printf("Created %d users", response.CreatedCount)
+    
+    // 4. Bidirectional streaming
+    log.Println("\n=== Bidirectional Streaming: ChatUsers ===")
+    chatStream, err := client.ChatUsers(ctx)
+    if err != nil {
+        log.Fatalf("ChatUsers failed: %v", err)
+    }
+    
+    // Send messages
+    go func() {
+        messages := []string{"Hello", "How are you?", "Goodbye"}
+        for _, msg := range messages {
+            if err := chatStream.Send(&pb.ChatMessage{
+                UserId: 1,
+                Text:   msg,
+            }); err != nil {
+                log.Fatalf("send error: %v", err)
+            }
+            time.Sleep(500 * time.Millisecond)
+        }
+        chatStream.CloseSend()
+    }()
+    
+    // Receive responses
+    for {
+        resp, err := chatStream.Recv()
+        if err == io.EOF {
+            break
+        }
+        if err != nil {
+            log.Fatalf("receive error: %v", err)
+        }
+        log.Printf("Response: %s", resp.Text)
+    }
+}
+```
+
+### gRPC Error Handling
+
+**Standard Error Codes**:
+```go
+// Common gRPC status codes
+codes.OK                 // Success
+codes.Canceled           // Operation canceled
+codes.InvalidArgument    // Invalid request
+codes.NotFound           // Resource not found
+codes.AlreadyExists      // Resource already exists
+codes.PermissionDenied   // No permission
+codes.Unauthenticated    // Not authenticated
+codes.ResourceExhausted  // Rate limit exceeded
+codes.Internal           // Internal server error
+codes.Unavailable        // Service unavailable
+codes.DeadlineExceeded   // Timeout
+
+// Server
+func (s *server) GetUser(ctx context.Context, req *pb.GetUserRequest) (*pb.User, error) {
+    if req.UserId <= 0 {
+        return nil, status.Errorf(codes.InvalidArgument, "invalid user id: %d", req.UserId)
+    }
+    
+    user, exists := s.users[req.UserId]
+    if !exists {
+        return nil, status.Errorf(codes.NotFound, "user %d not found", req.UserId)
+    }
+    
+    return user, nil
+}
+
+// Client
+user, err := client.GetUser(ctx, &pb.GetUserRequest{UserId: 999})
+if err != nil {
+    st, ok := status.FromError(err)
+    if ok {
+        switch st.Code() {
+        case codes.NotFound:
+            log.Println("User not found")
+        case codes.InvalidArgument:
+            log.Println("Invalid request")
+        default:
+            log.Printf("Error: %s", st.Message())
+        }
+    }
+}
+```
+
+### gRPC Interceptors (Middleware)
+
+**Server Interceptor** (Go):
+```go
+func loggingInterceptor(
+    ctx context.Context,
+    req interface{},
+    info *grpc.UnaryServerInfo,
+    handler grpc.UnaryHandler,
+) (interface{}, error) {
+    start := time.Now()
+    
+    // Before request
+    log.Printf("Request: %s", info.FullMethod)
+    
+    // Call handler
+    resp, err := handler(ctx, req)
+    
+    // After request
+    duration := time.Since(start)
+    log.Printf("Response: %s, Duration: %v, Error: %v", info.FullMethod, duration, err)
+    
+    return resp, err
+}
+
+// Use interceptor
+s := grpc.NewServer(
+    grpc.UnaryInterceptor(loggingInterceptor),
+)
+```
+
+**Authentication Interceptor**:
+```go
+func authInterceptor(
+    ctx context.Context,
+    req interface{},
+    info *grpc.UnaryServerInfo,
+    handler grpc.UnaryHandler,
+) (interface{}, error) {
+    // Get metadata
+    md, ok := metadata.FromIncomingContext(ctx)
+    if !ok {
+        return nil, status.Errorf(codes.Unauthenticated, "missing metadata")
+    }
+    
+    // Check token
+    tokens := md.Get("authorization")
+    if len(tokens) == 0 {
+        return nil, status.Errorf(codes.Unauthenticated, "missing token")
+    }
+    
+    token := tokens[0]
+    if !validateToken(token) {
+        return nil, status.Errorf(codes.Unauthenticated, "invalid token")
+    }
+    
+    return handler(ctx, req)
+}
+```
+
+### gRPC Load Balancing
+
+**Client-Side Load Balancing**:
+```go
+// Round-robin
+conn, err := grpc.Dial(
+    "dns:///my-service.example.com:50051",
+    grpc.WithDefaultServiceConfig(`{"loadBalancingPolicy":"round_robin"}`),
+    grpc.WithTransportCredentials(insecure.NewCredentials()),
+)
+
+// With multiple addresses
+conn, err := grpc.Dial(
+    "localhost:50051,localhost:50052,localhost:50053",
+    grpc.WithDefaultServiceConfig(`{"loadBalancingPolicy":"round_robin"}`),
+    grpc.WithTransportCredentials(insecure.NewCredentials()),
+)
+```
+
+### gRPC-Web (Browser Support)
+
+**Problem**: Browsers don't support HTTP/2 gRPC natively
+
+**Solution**: gRPC-Web proxy (Envoy, Nginx)
+
+**Envoy Configuration**:
+```yaml
+static_resources:
+  listeners:
+  - name: listener_0
+    address:
+      socket_address: { address: 0.0.0.0, port_value: 8080 }
+    filter_chains:
+    - filters:
+      - name: envoy.filters.network.http_connection_manager
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+          codec_type: auto
+          stat_prefix: ingress_http
+          route_config:
+            name: local_route
+            virtual_hosts:
+            - name: local_service
+              domains: ["*"]
+              routes:
+              - match: { prefix: "/" }
+                route:
+                  cluster: grpc_service
+                  timeout: 0s
+                  max_stream_duration:
+                    grpc_timeout_header_max: 0s
+              cors:
+                allow_origin_string_match:
+                - prefix: "*"
+                allow_methods: GET, PUT, DELETE, POST, OPTIONS
+                allow_headers: keep-alive,user-agent,cache-control,content-type,content-transfer-encoding,custom-header-1,x-accept-content-transfer-encoding,x-accept-response-streaming,x-user-agent,x-grpc-web,grpc-timeout
+                max_age: "1728000"
+                expose_headers: custom-header-1,grpc-status,grpc-message
+          http_filters:
+          - name: envoy.filters.http.grpc_web
+          - name: envoy.filters.http.cors
+          - name: envoy.filters.http.router
+  
+  clusters:
+  - name: grpc_service
+    connect_timeout: 0.25s
+    type: logical_dns
+    http2_protocol_options: {}
+    lb_policy: round_robin
+    load_assignment:
+      cluster_name: cluster_0
+      endpoints:
+      - lb_endpoints:
+        - endpoint:
+            address:
+              socket_address:
+                address: localhost
+                port_value: 50051
+```
+
+**JavaScript Client** (gRPC-Web):
+```javascript
+// npm install grpc-web
+
+const {UserServiceClient} = require('./user_grpc_web_pb.js');
+const {GetUserRequest} = require('./user_pb.js');
+
+const client = new UserServiceClient('http://localhost:8080');
+
+const request = new GetUserRequest();
+request.setUserId(1);
+
+client.getUser(request, {}, (err, response) => {
+  if (err) {
+    console.error(err);
+  } else {
+    console.log('User:', response.getName());
+  }
+});
+```
+
+### Performance Comparison
+
+**Benchmark Results** (1000 requests):
+```
+REST + JSON:
+- Request size: ~200 bytes
+- Response size: ~150 bytes
+- Latency: 50ms avg
+- Throughput: 20 requests/sec
+
+gRPC + Protobuf:
+- Request size: ~20 bytes (10x smaller)
+- Response size: ~15 bytes (10x smaller)
+- Latency: 5ms avg (10x faster)
+- Throughput: 200 requests/sec (10x more)
+```
+
+### Open Source & Commercial Tools
+
+**Open Source**:
+- **gRPC** (Google): Core framework
+- **grpcurl**: curl for gRPC (testing)
+- **grpcui**: Web UI for gRPC (like Postman)
+- **Evans**: gRPC client REPL
+- **Envoy Proxy**: gRPC-Web gateway
+- **BloomRPC**: GUI client for gRPC
+- **Buf**: Protobuf tooling
+- **grpc-gateway**: REST-to-gRPC proxy
+
+**Commercial/Managed**:
+- **Google Cloud Run**: Native gRPC support
+- **AWS App Runner**: gRPC support
+- **Linkerd**: Service mesh with gRPC
+- **Istio**: Service mesh with gRPC
+- Most cloud platforms support gRPC natively
+
+**Language Support**:
+- C/C++ (official)
+- C# (.NET)
+- Dart
+- Go
+- Java
+- Kotlin
+- Node.js
+- Objective-C
+- PHP
+- Python
+- Ruby
+
 ---
 
 ## WebSockets
@@ -7177,3 +8238,1468 @@ def get_user(user_id):
 ---
 
 This comprehensive API design guide covers REST principles, versioning, authentication, GraphQL, documentation, and production best practices with complete implementations!
+
+---
+
+## Complete API Implementation
+
+### Full-Featured REST API (Python + Flask + PostgreSQL)
+
+This section provides a complete, production-ready REST API implementation with all best practices.
+
+**Project Structure**:
+```
+api_project/
+├── app/
+│   ├── __init__.py
+│   ├── models.py           # Database models
+│   ├── schemas.py          # Request/response schemas
+│   ├── routes/
+│   │   ├── __init__.py
+│   │   ├── auth.py         # Authentication routes
+│   │   └── users.py        # User routes
+│   ├── middleware/
+│   │   ├── __init__.py
+│   │   ├── auth.py         # Auth middleware
+│   │   └── rate_limit.py   # Rate limiting
+│   └── utils/
+│       ├── __init__.py
+│       ├── db.py           # Database utilities
+│       └── cache.py        # Cache utilities
+├── migrations/             # Database migrations
+├── tests/                  # Test files
+├── config.py              # Configuration
+├── requirements.txt       # Dependencies
+└── run.py                 # Entry point
+```
+
+**requirements.txt**:
+```
+Flask==3.0.0
+Flask-SQLAlchemy==3.0.5
+Flask-Migrate==4.0.5
+Flask-CORS==4.0.0
+psycopg2-binary==2.9.9
+redis==5.0.1
+python-jose[cryptography]==3.3.0
+passlib==1.7.4
+marshmallow==3.20.1
+python-dotenv==1.0.0
+gunicorn==21.2.0
+```
+
+**config.py**:
+```python
+import os
+from datetime import timedelta
+
+class Config:
+    # Database
+    SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL', 'postgresql://user:pass@localhost/api_db')
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    
+    # Redis
+    REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
+    
+    # JWT
+    SECRET_KEY = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
+    JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=1)
+    JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=30)
+    
+    # Pagination
+    DEFAULT_PAGE_SIZE = 20
+    MAX_PAGE_SIZE = 100
+    
+    # Rate Limiting
+    RATE_LIMIT_REQUESTS = 100
+    RATE_LIMIT_WINDOW = 3600  # 1 hour
+    
+    # CORS
+    CORS_ORIGINS = os.getenv('CORS_ORIGINS', '*').split(',')
+
+class DevelopmentConfig(Config):
+    DEBUG = True
+
+class ProductionConfig(Config):
+    DEBUG = False
+
+config = {
+    'development': DevelopmentConfig,
+    'production': ProductionConfig,
+    'default': DevelopmentConfig
+}
+```
+
+**app/models.py**:
+```python
+from datetime import datetime
+from flask_sqlalchemy import SQLAlchemy
+from passlib.hash import bcrypt
+
+db = SQLAlchemy()
+
+class User(db.Model):
+    __tablename__ = 'users'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(255), unique=True, nullable=False, index=True)
+    username = db.Column(db.String(100), unique=True, nullable=False, index=True)
+    password_hash = db.Column(db.String(255), nullable=False)
+    first_name = db.Column(db.String(100))
+    last_name = db.Column(db.String(100))
+    is_active = db.Column(db.Boolean, default=True)
+    is_admin = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    posts = db.relationship('Post', backref='author', lazy='dynamic', cascade='all, delete-orphan')
+    
+    def set_password(self, password):
+        """Hash and set password"""
+        self.password_hash = bcrypt.hash(password)
+    
+    def check_password(self, password):
+        """Verify password"""
+        return bcrypt.verify(password, self.password_hash)
+    
+    def to_dict(self):
+        """Convert to dictionary"""
+        return {
+            'id': self.id,
+            'email': self.email,
+            'username': self.username,
+            'first_name': self.first_name,
+            'last_name': self.last_name,
+            'is_active': self.is_active,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+class Post(db.Model):
+    __tablename__ = 'posts'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    published = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def to_dict(self):
+        """Convert to dictionary"""
+        return {
+            'id': self.id,
+            'title': self.title,
+            'content': self.content,
+            'user_id': self.user_id,
+            'author': self.author.username if self.author else None,
+            'published': self.published,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+        }
+```
+
+**app/schemas.py**:
+```python
+from marshmallow import Schema, fields, validates, ValidationError, validate
+import re
+
+class UserSchema(Schema):
+    """User schema for validation"""
+    id = fields.Int(dump_only=True)
+    email = fields.Email(required=True)
+    username = fields.Str(required=True, validate=validate.Length(min=3, max=100))
+    password = fields.Str(required=True, load_only=True, validate=validate.Length(min=8))
+    first_name = fields.Str(validate=validate.Length(max=100))
+    last_name = fields.Str(validate=validate.Length(max=100))
+    is_active = fields.Bool(dump_only=True)
+    is_admin = fields.Bool(dump_only=True)
+    created_at = fields.DateTime(dump_only=True)
+    updated_at = fields.DateTime(dump_only=True)
+    
+    @validates('username')
+    def validate_username(self, value):
+        if not re.match(r'^[a-zA-Z0-9_]+$', value):
+            raise ValidationError('Username can only contain letters, numbers, and underscores')
+
+class LoginSchema(Schema):
+    """Login schema"""
+    email = fields.Email(required=True)
+    password = fields.Str(required=True)
+
+class PostSchema(Schema):
+    """Post schema"""
+    id = fields.Int(dump_only=True)
+    title = fields.Str(required=True, validate=validate.Length(min=1, max=200))
+    content = fields.Str(required=True, validate=validate.Length(min=1))
+    user_id = fields.Int(dump_only=True)
+    author = fields.Str(dump_only=True)
+    published = fields.Bool()
+    created_at = fields.DateTime(dump_only=True)
+    updated_at = fields.DateTime(dump_only=True)
+
+class UpdatePostSchema(Schema):
+    """Update post schema (all fields optional)"""
+    title = fields.Str(validate=validate.Length(min=1, max=200))
+    content = fields.Str(validate=validate.Length(min=1))
+    published = fields.Bool()
+```
+
+**app/middleware/auth.py**:
+```python
+from functools import wraps
+from flask import request, jsonify, current_app
+from jose import jwt, JWTError
+from datetime import datetime, timedelta
+from app.models import db, User
+
+def create_access_token(user_id):
+    """Create JWT access token"""
+    payload = {
+        'user_id': user_id,
+        'exp': datetime.utcnow() + current_app.config['JWT_ACCESS_TOKEN_EXPIRES'],
+        'iat': datetime.utcnow(),
+        'type': 'access'
+    }
+    return jwt.encode(payload, current_app.config['SECRET_KEY'], algorithm='HS256')
+
+def create_refresh_token(user_id):
+    """Create JWT refresh token"""
+    payload = {
+        'user_id': user_id,
+        'exp': datetime.utcnow() + current_app.config['JWT_REFRESH_TOKEN_EXPIRES'],
+        'iat': datetime.utcnow(),
+        'type': 'refresh'
+    }
+    return jwt.encode(payload, current_app.config['SECRET_KEY'], algorithm='HS256')
+
+def verify_token(token):
+    """Verify JWT token"""
+    try:
+        payload = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=['HS256'])
+        return payload
+    except JWTError:
+        return None
+
+def token_required(f):
+    """Decorator to require valid JWT token"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        # Get token from Authorization header
+        auth_header = request.headers.get('Authorization')
+        
+        if not auth_header:
+            return jsonify({'error': {'message': 'Missing authorization header'}}), 401
+        
+        parts = auth_header.split()
+        
+        if parts[0].lower() != 'bearer' or len(parts) != 2:
+            return jsonify({'error': {'message': 'Invalid authorization header'}}), 401
+        
+        token = parts[1]
+        payload = verify_token(token)
+        
+        if not payload:
+            return jsonify({'error': {'message': 'Invalid or expired token'}}), 401
+        
+        if payload.get('type') != 'access':
+            return jsonify({'error': {'message': 'Invalid token type'}}), 401
+        
+        # Get user
+        user = User.query.get(payload['user_id'])
+        
+        if not user or not user.is_active:
+            return jsonify({'error': {'message': 'User not found or inactive'}}), 401
+        
+        # Add user to request context
+        request.current_user = user
+        
+        return f(*args, **kwargs)
+    
+    return decorated_function
+
+def admin_required(f):
+    """Decorator to require admin privileges"""
+    @wraps(f)
+    @token_required
+    def decorated_function(*args, **kwargs):
+        if not request.current_user.is_admin:
+            return jsonify({'error': {'message': 'Admin privileges required'}}), 403
+        return f(*args, **kwargs)
+    
+    return decorated_function
+```
+
+**app/middleware/rate_limit.py**:
+```python
+from functools import wraps
+from flask import request, jsonify, current_app
+import redis
+import time
+
+redis_client = redis.Redis.from_url(current_app.config['REDIS_URL'], decode_responses=True)
+
+def rate_limit(f):
+    """Rate limiting decorator"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        # Use IP address as key
+        key = f"rate_limit:{request.remote_addr}"
+        
+        # Get current count
+        current = redis_client.get(key)
+        
+        if current is None:
+            # First request in window
+            redis_client.setex(key, current_app.config['RATE_LIMIT_WINDOW'], 1)
+            remaining = current_app.config['RATE_LIMIT_REQUESTS'] - 1
+        else:
+            current = int(current)
+            
+            if current >= current_app.config['RATE_LIMIT_REQUESTS']:
+                # Rate limit exceeded
+                ttl = redis_client.ttl(key)
+                return jsonify({
+                    'error': {
+                        'message': 'Rate limit exceeded',
+                        'retry_after': ttl
+                    }
+                }), 429
+            
+            # Increment counter
+            redis_client.incr(key)
+            remaining = current_app.config['RATE_LIMIT_REQUESTS'] - current - 1
+        
+        # Add rate limit headers
+        response = f(*args, **kwargs)
+        if isinstance(response, tuple):
+            response_obj, status_code = response
+        else:
+            response_obj, status_code = response, 200
+        
+        # Convert to Response object if needed
+        from flask import make_response
+        if not hasattr(response_obj, 'headers'):
+            response_obj = make_response(response_obj, status_code)
+        
+        response_obj.headers['X-RateLimit-Limit'] = str(current_app.config['RATE_LIMIT_REQUESTS'])
+        response_obj.headers['X-RateLimit-Remaining'] = str(remaining)
+        response_obj.headers['X-RateLimit-Reset'] = str(int(time.time()) + redis_client.ttl(key))
+        
+        return response_obj
+    
+    return decorated_function
+```
+
+**app/routes/auth.py**:
+```python
+from flask import Blueprint, request, jsonify
+from marshmallow import ValidationError
+from app.models import db, User
+from app.schemas import UserSchema, LoginSchema
+from app.middleware.auth import create_access_token, create_refresh_token, verify_token
+
+auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
+
+@auth_bp.route('/register', methods=['POST'])
+def register():
+    """Register new user"""
+    schema = UserSchema()
+    
+    try:
+        # Validate request data
+        data = schema.load(request.json)
+    except ValidationError as err:
+        return jsonify({'error': {'message': 'Validation failed', 'details': err.messages}}), 400
+    
+    # Check if user exists
+    if User.query.filter_by(email=data['email']).first():
+        return jsonify({'error': {'message': 'Email already registered'}}), 409
+    
+    if User.query.filter_by(username=data['username']).first():
+        return jsonify({'error': {'message': 'Username already taken'}}), 409
+    
+    # Create user
+    user = User(
+        email=data['email'],
+        username=data['username'],
+        first_name=data.get('first_name'),
+        last_name=data.get('last_name')
+    )
+    user.set_password(data['password'])
+    
+    db.session.add(user)
+    db.session.commit()
+    
+    # Generate tokens
+    access_token = create_access_token(user.id)
+    refresh_token = create_refresh_token(user.id)
+    
+    return jsonify({
+        'user': schema.dump(user),
+        'access_token': access_token,
+        'refresh_token': refresh_token
+    }), 201
+
+@auth_bp.route('/login', methods=['POST'])
+def login():
+    """Login user"""
+    schema = LoginSchema()
+    
+    try:
+        data = schema.load(request.json)
+    except ValidationError as err:
+        return jsonify({'error': {'message': 'Validation failed', 'details': err.messages}}), 400
+    
+    # Find user
+    user = User.query.filter_by(email=data['email']).first()
+    
+    if not user or not user.check_password(data['password']):
+        return jsonify({'error': {'message': 'Invalid email or password'}}), 401
+    
+    if not user.is_active:
+        return jsonify({'error': {'message': 'Account is inactive'}}), 403
+    
+    # Generate tokens
+    access_token = create_access_token(user.id)
+    refresh_token = create_refresh_token(user.id)
+    
+    return jsonify({
+        'user': UserSchema().dump(user),
+        'access_token': access_token,
+        'refresh_token': refresh_token
+    }), 200
+
+@auth_bp.route('/refresh', methods=['POST'])
+def refresh():
+    """Refresh access token"""
+    refresh_token = request.json.get('refresh_token')
+    
+    if not refresh_token:
+        return jsonify({'error': {'message': 'Missing refresh token'}}), 400
+    
+    payload = verify_token(refresh_token)
+    
+    if not payload or payload.get('type') != 'refresh':
+        return jsonify({'error': {'message': 'Invalid refresh token'}}), 401
+    
+    # Generate new access token
+    access_token = create_access_token(payload['user_id'])
+    
+    return jsonify({'access_token': access_token}), 200
+```
+
+**app/routes/users.py**:
+```python
+from flask import Blueprint, request, jsonify
+from marshmallow import ValidationError
+from sqlalchemy import or_
+from app.models import db, User, Post
+from app.schemas import UserSchema, PostSchema, UpdatePostSchema
+from app.middleware.auth import token_required, admin_required
+from app.middleware.rate_limit import rate_limit
+
+users_bp = Blueprint('users', __name__, url_prefix='/api/users')
+
+@users_bp.route('', methods=['GET'])
+@rate_limit
+@token_required
+def list_users():
+    """List users with pagination and filtering"""
+    # Pagination
+    page = request.args.get('page', 1, type=int)
+    per_page = min(request.args.get('per_page', 20, type=int), 100)
+    
+    # Filtering
+    search = request.args.get('search', '')
+    is_active = request.args.get('is_active', type=lambda v: v.lower() == 'true')
+    
+    # Build query
+    query = User.query
+    
+    if search:
+        query = query.filter(
+            or_(
+                User.username.ilike(f'%{search}%'),
+                User.email.ilike(f'%{search}%'),
+                User.first_name.ilike(f'%{search}%'),
+                User.last_name.ilike(f'%{search}%')
+            )
+        )
+    
+    if is_active is not None:
+        query = query.filter_by(is_active=is_active)
+    
+    # Sorting
+    sort_by = request.args.get('sort_by', 'created_at')
+    order = request.args.get('order', 'desc')
+    
+    if hasattr(User, sort_by):
+        sort_column = getattr(User, sort_by)
+        if order == 'asc':
+            query = query.order_by(sort_column.asc())
+        else:
+            query = query.order_by(sort_column.desc())
+    
+    # Execute query
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+    
+    schema = UserSchema()
+    
+    return jsonify({
+        'data': [schema.dump(user) for user in pagination.items],
+        'pagination': {
+            'page': page,
+            'per_page': per_page,
+            'total': pagination.total,
+            'pages': pagination.pages,
+            'has_next': pagination.has_next,
+            'has_prev': pagination.has_prev
+        }
+    }), 200
+
+@users_bp.route('/<int:user_id>', methods=['GET'])
+@rate_limit
+@token_required
+def get_user(user_id):
+    """Get single user"""
+    user = User.query.get(user_id)
+    
+    if not user:
+        return jsonify({'error': {'message': 'User not found'}}), 404
+    
+    schema = UserSchema()
+    return jsonify(schema.dump(user)), 200
+
+@users_bp.route('/<int:user_id>', methods=['PUT'])
+@token_required
+def update_user(user_id):
+    """Update user (own account or admin)"""
+    user = User.query.get(user_id)
+    
+    if not user:
+        return jsonify({'error': {'message': 'User not found'}}), 404
+    
+    # Check permission
+    if request.current_user.id != user_id and not request.current_user.is_admin:
+        return jsonify({'error': {'message': 'Permission denied'}}), 403
+    
+    schema = UserSchema(partial=True, exclude=['password'])
+    
+    try:
+        data = schema.load(request.json)
+    except ValidationError as err:
+        return jsonify({'error': {'message': 'Validation failed', 'details': err.messages}}), 400
+    
+    # Update allowed fields
+    allowed_fields = ['first_name', 'last_name']
+    if request.current_user.is_admin:
+        allowed_fields.extend(['is_active', 'is_admin'])
+    
+    for field, value in data.items():
+        if field in allowed_fields:
+            setattr(user, field, value)
+    
+    db.session.commit()
+    
+    return jsonify(schema.dump(user)), 200
+
+@users_bp.route('/<int:user_id>', methods=['DELETE'])
+@admin_required
+def delete_user(user_id):
+    """Delete user (admin only)"""
+    user = User.query.get(user_id)
+    
+    if not user:
+        return jsonify({'error': {'message': 'User not found'}}), 404
+    
+    db.session.delete(user)
+    db.session.commit()
+    
+    return '', 204
+
+# Posts endpoints
+@users_bp.route('/<int:user_id>/posts', methods=['GET'])
+@rate_limit
+@token_required
+def list_user_posts(user_id):
+    """List posts by user"""
+    user = User.query.get(user_id)
+    
+    if not user:
+        return jsonify({'error': {'message': 'User not found'}}), 404
+    
+    page = request.args.get('page', 1, type=int)
+    per_page = min(request.args.get('per_page', 20, type=int), 100)
+    
+    query = Post.query.filter_by(user_id=user_id)
+    
+    # Non-owners can only see published posts
+    if request.current_user.id != user_id and not request.current_user.is_admin:
+        query = query.filter_by(published=True)
+    
+    pagination = query.order_by(Post.created_at.desc()).paginate(
+        page=page, per_page=per_page, error_out=False
+    )
+    
+    schema = PostSchema()
+    
+    return jsonify({
+        'data': [schema.dump(post) for post in pagination.items],
+        'pagination': {
+            'page': page,
+            'per_page': per_page,
+            'total': pagination.total,
+            'pages': pagination.pages
+        }
+    }), 200
+
+@users_bp.route('/<int:user_id>/posts', methods=['POST'])
+@token_required
+def create_post(user_id):
+    """Create post"""
+    # Check permission
+    if request.current_user.id != user_id:
+        return jsonify({'error': {'message': 'Permission denied'}}), 403
+    
+    schema = PostSchema()
+    
+    try:
+        data = schema.load(request.json)
+    except ValidationError as err:
+        return jsonify({'error': {'message': 'Validation failed', 'details': err.messages}}), 400
+    
+    post = Post(
+        title=data['title'],
+        content=data['content'],
+        user_id=user_id,
+        published=data.get('published', False)
+    )
+    
+    db.session.add(post)
+    db.session.commit()
+    
+    return jsonify(schema.dump(post)), 201
+```
+
+**app/__init__.py**:
+```python
+from flask import Flask, jsonify
+from flask_cors import CORS
+from flask_migrate import Migrate
+from config import config
+from app.models import db
+
+migrate = Migrate()
+
+def create_app(config_name='default'):
+    """Application factory"""
+    app = Flask(__name__)
+    app.config.from_object(config[config_name])
+    
+    # Initialize extensions
+    db.init_app(app)
+    migrate.init_app(app, db)
+    CORS(app, origins=app.config['CORS_ORIGINS'])
+    
+    # Register blueprints
+    from app.routes.auth import auth_bp
+    from app.routes.users import users_bp
+    
+    app.register_blueprint(auth_bp)
+    app.register_blueprint(users_bp)
+    
+    # Health check
+    @app.route('/health')
+    def health():
+        return jsonify({'status': 'healthy'}), 200
+    
+    # Error handlers
+    @app.errorhandler(404)
+    def not_found(error):
+        return jsonify({'error': {'message': 'Resource not found'}}), 404
+    
+    @app.errorhandler(500)
+    def internal_error(error):
+        db.session.rollback()
+        return jsonify({'error': {'message': 'Internal server error'}}), 500
+    
+    return app
+```
+
+**run.py**:
+```python
+import os
+from app import create_app, db
+
+app = create_app(os.getenv('FLASK_ENV', 'development'))
+
+@app.cli.command()
+def initdb():
+    """Initialize database"""
+    db.create_all()
+    print('Database initialized!')
+
+@app.cli.command()
+def seed():
+    """Seed database with sample data"""
+    from app.models import User
+    
+    # Create admin user
+    admin = User(
+        email='admin@example.com',
+        username='admin',
+        first_name='Admin',
+        last_name='User',
+        is_admin=True
+    )
+    admin.set_password('admin123')
+    
+    db.session.add(admin)
+    db.session.commit()
+    
+    print('Database seeded!')
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)
+```
+
+**Running the Application**:
+```bash
+# Install dependencies
+pip install -r requirements.txt
+
+# Set environment variables
+export FLASK_ENV=development
+export DATABASE_URL=postgresql://user:pass@localhost/api_db
+export REDIS_URL=redis://localhost:6379/0
+export SECRET_KEY=your-secret-key
+
+# Initialize database
+flask initdb
+
+# Run migrations (if using Flask-Migrate)
+flask db init
+flask db migrate -m "Initial migration"
+flask db upgrade
+
+# Seed database
+flask seed
+
+# Run development server
+python run.py
+
+# Or use gunicorn for production
+gunicorn -w 4 -b 0.0.0.0:5000 "app:create_app('production')"
+```
+
+**Testing the API**:
+```bash
+# Register user
+curl -X POST http://localhost:5000/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "alice@example.com",
+    "username": "alice",
+    "password": "password123",
+    "first_name": "Alice",
+    "last_name": "Smith"
+  }'
+
+# Login
+curl -X POST http://localhost:5000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "alice@example.com",
+    "password": "password123"
+  }'
+
+# Get users (with token)
+curl -X GET http://localhost:5000/api/users \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+
+# Create post
+curl -X POST http://localhost:5000/api/users/1/posts \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "My First Post",
+    "content": "This is the content",
+    "published": true
+  }'
+```
+
+---
+
+### Full-Featured REST API (Go + Gin + PostgreSQL)
+
+**Project Structure**:
+```
+api_project/
+├── cmd/
+│   └── server/
+│       └── main.go
+├── internal/
+│   ├── config/
+│   │   └── config.go
+│   ├── models/
+│   │   ├── user.go
+│   │   └── post.go
+│   ├── handlers/
+│   │   ├── auth.go
+│   │   └── users.go
+│   ├── middleware/
+│   │   ├── auth.go
+│   │   └── ratelimit.go
+│   ├── database/
+│   │   └── db.go
+│   └── utils/
+│       └── jwt.go
+├── migrations/
+├── go.mod
+└── go.sum
+```
+
+**go.mod**:
+```go
+module api_project
+
+go 1.21
+
+require (
+    github.com/gin-gonic/gin v1.9.1
+    github.com/gin-contrib/cors v1.5.0
+    github.com/golang-jwt/jwt/v5 v5.2.0
+    github.com/go-playground/validator/v10 v10.16.0
+    github.com/go-redis/redis/v8 v8.11.5
+    github.com/joho/godotenv v1.5.1
+    golang.org/x/crypto v0.17.0
+    gorm.io/driver/postgres v1.5.4
+    gorm.io/gorm v1.25.5
+)
+```
+
+**internal/config/config.go**:
+```go
+package config
+
+import (
+    "os"
+    "time"
+)
+
+type Config struct {
+    DatabaseURL string
+    RedisURL    string
+    SecretKey   string
+    Port        string
+    
+    JWTAccessExpiry  time.Duration
+    JWTRefreshExpiry time.Duration
+    
+    RateLimitRequests int
+    RateLimitWindow   time.Duration
+}
+
+func Load() *Config {
+    return &Config{
+        DatabaseURL: getEnv("DATABASE_URL", "postgres://user:pass@localhost/api_db?sslmode=disable"),
+        RedisURL:    getEnv("REDIS_URL", "localhost:6379"),
+        SecretKey:   getEnv("SECRET_KEY", "dev-secret-key"),
+        Port:        getEnv("PORT", "8080"),
+        
+        JWTAccessExpiry:  time.Hour,
+        JWTRefreshExpiry: 30 * 24 * time.Hour,
+        
+        RateLimitRequests: 100,
+        RateLimitWindow:   time.Hour,
+    }
+}
+
+func getEnv(key, defaultValue string) string {
+    if value := os.Getenv(key); value != "" {
+        return value
+    }
+    return defaultValue
+}
+```
+
+**internal/models/user.go**:
+```go
+package models
+
+import (
+    "time"
+    "golang.org/x/crypto/bcrypt"
+    "gorm.io/gorm"
+)
+
+type User struct {
+    ID           uint      `gorm:"primaryKey" json:"id"`
+    Email        string    `gorm:"uniqueIndex;not null" json:"email" binding:"required,email"`
+    Username     string    `gorm:"uniqueIndex;not null" json:"username" binding:"required,min=3,max=100"`
+    PasswordHash string    `gorm:"not null" json:"-"`
+    FirstName    string    `json:"first_name,omitempty"`
+    LastName     string    `json:"last_name,omitempty"`
+    IsActive     bool      `gorm:"default:true" json:"is_active"`
+    IsAdmin      bool      `gorm:"default:false" json:"is_admin"`
+    CreatedAt    time.Time `json:"created_at"`
+    UpdatedAt    time.Time `json:"updated_at"`
+    
+    Posts []Post `gorm:"foreignKey:UserID" json:"posts,omitempty"`
+}
+
+func (u *User) SetPassword(password string) error {
+    hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+    if err != nil {
+        return err
+    }
+    u.PasswordHash = string(hash)
+    return nil
+}
+
+func (u *User) CheckPassword(password string) bool {
+    err := bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte(password))
+    return err == nil
+}
+
+type CreateUserRequest struct {
+    Email     string `json:"email" binding:"required,email"`
+    Username  string `json:"username" binding:"required,min=3,max=100"`
+    Password  string `json:"password" binding:"required,min=8"`
+    FirstName string `json:"first_name"`
+    LastName  string `json:"last_name"`
+}
+
+type LoginRequest struct {
+    Email    string `json:"email" binding:"required,email"`
+    Password string `json:"password" binding:"required"`
+}
+```
+
+**internal/models/post.go**:
+```go
+package models
+
+import "time"
+
+type Post struct {
+    ID        uint      `gorm:"primaryKey" json:"id"`
+    Title     string    `gorm:"not null;size:200" json:"title" binding:"required,min=1,max=200"`
+    Content   string    `gorm:"not null;type:text" json:"content" binding:"required"`
+    UserID    uint      `gorm:"not null" json:"user_id"`
+    Published bool      `gorm:"default:false" json:"published"`
+    CreatedAt time.Time `json:"created_at"`
+    UpdatedAt time.Time `json:"updated_at"`
+    
+    Author User `gorm:"foreignKey:UserID" json:"author,omitempty"`
+}
+
+type CreatePostRequest struct {
+    Title     string `json:"title" binding:"required,min=1,max=200"`
+    Content   string `json:"content" binding:"required"`
+    Published bool   `json:"published"`
+}
+```
+
+**internal/utils/jwt.go**:
+```go
+package utils
+
+import (
+    "errors"
+    "time"
+    
+    "github.com/golang-jwt/jwt/v5"
+    "api_project/internal/config"
+)
+
+type Claims struct {
+    UserID uint   `json:"user_id"`
+    Type   string `json:"type"` // "access" or "refresh"
+    jwt.RegisteredClaims
+}
+
+func CreateAccessToken(userID uint, cfg *config.Config) (string, error) {
+    claims := Claims{
+        UserID: userID,
+        Type:   "access",
+        RegisteredClaims: jwt.RegisteredClaims{
+            ExpiresAt: jwt.NewNumericDate(time.Now().Add(cfg.JWTAccessExpiry)),
+            IssuedAt:  jwt.NewNumericDate(time.Now()),
+        },
+    }
+    
+    token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+    return token.SignedString([]byte(cfg.SecretKey))
+}
+
+func CreateRefreshToken(userID uint, cfg *config.Config) (string, error) {
+    claims := Claims{
+        UserID: userID,
+        Type:   "refresh",
+        RegisteredClaims: jwt.RegisteredClaims{
+            ExpiresAt: jwt.NewNumericDate(time.Now().Add(cfg.JWTRefreshExpiry)),
+            IssuedAt:  jwt.NewNumericDate(time.Now()),
+        },
+    }
+    
+    token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+    return token.SignedString([]byte(cfg.SecretKey))
+}
+
+func VerifyToken(tokenString string, cfg *config.Config) (*Claims, error) {
+    token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
+        return []byte(cfg.SecretKey), nil
+    })
+    
+    if err != nil {
+        return nil, err
+    }
+    
+    if claims, ok := token.Claims.(*Claims); ok && token.Valid {
+        return claims, nil
+    }
+    
+    return nil, errors.New("invalid token")
+}
+```
+
+**internal/middleware/auth.go**:
+```go
+package middleware
+
+import (
+    "net/http"
+    "strings"
+    
+    "github.com/gin-gonic/gin"
+    "api_project/internal/config"
+    "api_project/internal/models"
+    "api_project/internal/utils"
+    "gorm.io/gorm"
+)
+
+func AuthMiddleware(db *gorm.DB, cfg *config.Config) gin.HandlerFunc {
+    return func(c *gin.Context) {
+        // Get Authorization header
+        authHeader := c.GetHeader("Authorization")
+        
+        if authHeader == "" {
+            c.JSON(http.StatusUnauthorized, gin.H{
+                "error": gin.H{"message": "Missing authorization header"},
+            })
+            c.Abort()
+            return
+        }
+        
+        // Parse Bearer token
+        parts := strings.SplitN(authHeader, " ", 2)
+        if len(parts) != 2 || parts[0] != "Bearer" {
+            c.JSON(http.StatusUnauthorized, gin.H{
+                "error": gin.H{"message": "Invalid authorization header"},
+            })
+            c.Abort()
+            return
+        }
+        
+        token := parts[1]
+        
+        // Verify token
+        claims, err := utils.VerifyToken(token, cfg)
+        if err != nil || claims.Type != "access" {
+            c.JSON(http.StatusUnauthorized, gin.H{
+                "error": gin.H{"message": "Invalid or expired token"},
+            })
+            c.Abort()
+            return
+        }
+        
+        // Get user
+        var user models.User
+        if err := db.First(&user, claims.UserID).Error; err != nil {
+            c.JSON(http.StatusUnauthorized, gin.H{
+                "error": gin.H{"message": "User not found"},
+            })
+            c.Abort()
+            return
+        }
+        
+        if !user.IsActive {
+            c.JSON(http.StatusForbidden, gin.H{
+                "error": gin.H{"message": "Account is inactive"},
+            })
+            c.Abort()
+            return
+        }
+        
+        // Set user in context
+        c.Set("current_user", &user)
+        c.Next()
+    }
+}
+
+func AdminMiddleware() gin.HandlerFunc {
+    return func(c *gin.Context) {
+        user, exists := c.Get("current_user")
+        if !exists {
+            c.JSON(http.StatusUnauthorized, gin.H{
+                "error": gin.H{"message": "Unauthorized"},
+            })
+            c.Abort()
+            return
+        }
+        
+        if !user.(*models.User).IsAdmin {
+            c.JSON(http.StatusForbidden, gin.H{
+                "error": gin.H{"message": "Admin privileges required"},
+            })
+            c.Abort()
+            return
+        }
+        
+        c.Next()
+    }
+}
+```
+
+**internal/middleware/ratelimit.go**:
+```go
+package middleware
+
+import (
+    "context"
+    "fmt"
+    "net/http"
+    "strconv"
+    "time"
+    
+    "github.com/gin-gonic/gin"
+    "github.com/go-redis/redis/v8"
+    "api_project/internal/config"
+)
+
+func RateLimitMiddleware(rdb *redis.Client, cfg *config.Config) gin.HandlerFunc {
+    return func(c *gin.Context) {
+        key := fmt.Sprintf("rate_limit:%s", c.ClientIP())
+        ctx := context.Background()
+        
+        // Get current count
+        val, err := rdb.Get(ctx, key).Result()
+        
+        var current int
+        if err == redis.Nil {
+            // First request
+            rdb.SetEX(ctx, key, 1, cfg.RateLimitWindow)
+            current = 1
+        } else if err != nil {
+            // Redis error - allow request
+            c.Next()
+            return
+        } else {
+            current, _ = strconv.Atoi(val)
+            
+            if current >= cfg.RateLimitRequests {
+                // Rate limit exceeded
+                ttl, _ := rdb.TTL(ctx, key).Result()
+                
+                c.Header("X-RateLimit-Limit", strconv.Itoa(cfg.RateLimitRequests))
+                c.Header("X-RateLimit-Remaining", "0")
+                c.Header("X-RateLimit-Reset", strconv.FormatInt(time.Now().Add(ttl).Unix(), 10))
+                c.Header("Retry-After", strconv.FormatInt(int64(ttl.Seconds()), 10))
+                
+                c.JSON(http.StatusTooManyRequests, gin.H{
+                    "error": gin.H{
+                        "message":     "Rate limit exceeded",
+                        "retry_after": int64(ttl.Seconds()),
+                    },
+                })
+                c.Abort()
+                return
+            }
+            
+            // Increment
+            rdb.Incr(ctx, key)
+        }
+        
+        // Add headers
+        remaining := cfg.RateLimitRequests - current
+        c.Header("X-RateLimit-Limit", strconv.Itoa(cfg.RateLimitRequests))
+        c.Header("X-RateLimit-Remaining", strconv.Itoa(remaining))
+        
+        c.Next()
+    }
+}
+```
+
+**internal/handlers/auth.go**:
+```go
+package handlers
+
+import (
+    "net/http"
+    
+    "github.com/gin-gonic/gin"
+    "api_project/internal/config"
+    "api_project/internal/models"
+    "api_project/internal/utils"
+    "gorm.io/gorm"
+)
+
+type AuthHandler struct {
+    DB  *gorm.DB
+    Cfg *config.Config
+}
+
+func NewAuthHandler(db *gorm.DB, cfg *config.Config) *AuthHandler {
+    return &AuthHandler{DB: db, Cfg: cfg}
+}
+
+func (h *AuthHandler) Register(c *gin.Context) {
+    var req models.CreateUserRequest
+    
+    if err := c.ShouldBindJSON(&req); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{
+            "error": gin.H{
+                "message": "Validation failed",
+                "details": err.Error(),
+            },
+        })
+        return
+    }
+    
+    // Check if user exists
+    var existingUser models.User
+    if err := h.DB.Where("email = ?", req.Email).First(&existingUser).Error; err == nil {
+        c.JSON(http.StatusConflict, gin.H{
+            "error": gin.H{"message": "Email already registered"},
+        })
+        return
+    }
+    
+    if err := h.DB.Where("username = ?", req.Username).First(&existingUser).Error; err == nil {
+        c.JSON(http.StatusConflict, gin.H{
+            "error": gin.H{"message": "Username already taken"},
+        })
+        return
+    }
+    
+    // Create user
+    user := models.User{
+        Email:     req.Email,
+        Username:  req.Username,
+        FirstName: req.FirstName,
+        LastName:  req.LastName,
+    }
+    
+    if err := user.SetPassword(req.Password); err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{
+            "error": gin.H{"message": "Failed to create user"},
+        })
+        return
+    }
+    
+    if err := h.DB.Create(&user).Error; err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{
+            "error": gin.H{"message": "Failed to create user"},
+        })
+        return
+    }
+    
+    // Generate tokens
+    accessToken, _ := utils.CreateAccessToken(user.ID, h.Cfg)
+    refreshToken, _ := utils.CreateRefreshToken(user.ID, h.Cfg)
+    
+    c.JSON(http.StatusCreated, gin.H{
+        "user":          user,
+        "access_token":  accessToken,
+        "refresh_token": refreshToken,
+    })
+}
+
+func (h *AuthHandler) Login(c *gin.Context) {
+    var req models.LoginRequest
+    
+    if err := c.ShouldBindJSON(&req); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{
+            "error": gin.H{
+                "message": "Validation failed",
+                "details": err.Error(),
+            },
+        })
+        return
+    }
+    
+    // Find user
+    var user models.User
+    if err := h.DB.Where("email = ?", req.Email).First(&user).Error; err != nil {
+        c.JSON(http.StatusUnauthorized, gin.H{
+            "error": gin.H{"message": "Invalid email or password"},
+        })
+        return
+    }
+    
+    // Check password
+    if !user.CheckPassword(req.Password) {
+        c.JSON(http.StatusUnauthorized, gin.H{
+            "error": gin.H{"message": "Invalid email or password"},
+        })
+        return
+    }
+    
+    if !user.IsActive {
+        c.JSON(http.StatusForbidden, gin.H{
+            "error": gin.H{"message": "Account is inactive"},
+        })
+        return
+    }
+    
+    // Generate tokens
+    accessToken, _ := utils.CreateAccessToken(user.ID, h.Cfg)
+    refreshToken, _ := utils.CreateRefreshToken(user.ID, h.Cfg)
+    
+    c.JSON(http.StatusOK, gin.H{
+        "user":          user,
+        "access_token":  accessToken,
+        "refresh_token": refreshToken,
+    })
+}
+
+func (h *AuthHandler) Refresh(c *gin.Context) {
+    var req struct {
+        RefreshToken string `json:"refresh_token" binding:"required"`
+    }
+    
+    if err := c.ShouldBindJSON(&req); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{
+            "error": gin.H{"message": "Missing refresh token"},
+        })
+        return
+    }
+    
+    // Verify token
+    claims, err := utils.VerifyToken(req.RefreshToken, h.Cfg)
+    if err != nil || claims.Type != "refresh" {
+        c.JSON(http.StatusUnauthorized, gin.H{
+            "error": gin.H{"message": "Invalid refresh token"},
+        })
+        return
+    }
+    
+    // Generate new access token
+    accessToken, _ := utils.CreateAccessToken(claims.UserID, h.Cfg)
+    
+    c.JSON(http.StatusOK, gin.H{
+        "access_token": accessToken,
+    })
+}
+```
+
+**cmd/server/main.go**:
+```go
+package main
+
+import (
+    "context"
+    "log"
+    
+    "github.com/gin-gonic/gin"
+    "github.com/gin-contrib/cors"
+    "github.com/go-redis/redis/v8"
+    "github.com/joho/godotenv"
+    "gorm.io/driver/postgres"
+    "gorm.io/gorm"
+    
+    "api_project/internal/config"
+    "api_project/internal/handlers"
+    "api_project/internal/middleware"
+    "api_project/internal/models"
+)
+
+func main() {
+    // Load environment variables
+    godotenv.Load()
+    
+    // Load config
+    cfg := config.Load()
+    
+    // Connect to database
+    db, err := gorm.Open(postgres.Open(cfg.DatabaseURL), &gorm.Config{})
+    if err != nil {
+        log.Fatal("Failed to connect to database:", err)
+    }
+    
+    // Auto-migrate models
+    db.AutoMigrate(&models.User{}, &models.Post{})
+    
+    // Connect to Redis
+    rdb := redis.NewClient(&redis.Options{
+        Addr: cfg.RedisURL,
+    })
+    
+    if err := rdb.Ping(context.Background()).Err(); err != nil {
+        log.Fatal("Failed to connect to Redis:", err)
+    }
+    
+    // Setup Gin
+    r := gin.Default()
+    
+    // CORS
+    r.Use(cors.Default())
+    
+    // Rate limiting
+    r.Use(middleware.RateLimitMiddleware(rdb, cfg))
+    
+    // Health check
+    r.GET("/health", func(c *gin.Context) {
+        c.JSON(200, gin.H{"status": "healthy"})
+    })
+    
+    // Initialize handlers
+    authHandler := handlers.NewAuthHandler(db, cfg)
+    
+    // Auth routes
+    authGroup := r.Group("/api/auth")
+    {
+        authGroup.POST("/register", authHandler.Register)
+        authGroup.POST("/login", authHandler.Login)
+        authGroup.POST("/refresh", authHandler.Refresh)
+    }
+    
+    // Protected routes
+    api := r.Group("/api")
+    api.Use(middleware.AuthMiddleware(db, cfg))
+    {
+        // User routes would go here
+        // api.GET("/users", userHandler.List)
+        // etc.
+    }
+    
+    // Start server
+    log.Printf("Server starting on port %s", cfg.Port)
+    r.Run(":" + cfg.Port)
+}
+```
+
+**Running the Go Application**:
+```bash
+# Install dependencies
+go mod download
+
+# Set environment variables
+export DATABASE_URL="postgres://user:pass@localhost/api_db?sslmode=disable"
+export REDIS_URL="localhost:6379"
+export SECRET_KEY="your-secret-key"
+export PORT="8080"
+
+# Run
+go run cmd/server/main.go
+
+# Or build and run
+go build -o bin/server cmd/server/main.go
+./bin/server
+```
+
+This completes the comprehensive API implementation guide covering both Python and Go with full production-ready examples!
