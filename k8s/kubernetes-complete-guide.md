@@ -1156,6 +1156,30 @@ kubectl rollout undo deployment/python-app -n production
 
 ### 5.1 PostgreSQL Deployment
 
+#### What is a StatefulSet?
+
+A **StatefulSet** is a Kubernetes workload API object used to manage stateful applications. Unlike Deployments (which manage stateless apps), StatefulSets maintain a sticky identity for each of their Pods and provide guarantees about the ordering and uniqueness of these Pods.
+
+#### Why use a StatefulSet?
+
+- **Stable, unique network identifiers:** Each pod gets a persistent hostname (e.g., `postgres-0`, `postgres-1`)
+- **Stable, persistent storage:** Each pod gets its own PersistentVolumeClaim that persists across pod rescheduling
+- **Ordered, graceful deployment and scaling:** Pods are created in order (0, 1, 2...) and deleted in reverse order
+- **Ordered, automated rolling updates:** Updates happen one pod at a time in order
+
+#### When to use a StatefulSet?
+
+- **Databases:** PostgreSQL, MySQL, MongoDB, Cassandra (need stable storage and identity)
+- **Distributed systems:** Kafka, ZooKeeper, Elasticsearch (require stable network identity)
+- **Stateful applications:** Any app that requires stable persistent storage or ordered deployment
+- **Master-slave configurations:** Where pod order matters
+
+#### When NOT to use StatefulSet?
+
+- **Stateless applications:** Use Deployment instead (web apps, APIs, microservices)
+- **Temporary storage:** If you don't need data to persist across pod restarts
+- **Simple scenarios:** Use Deployment for easier management unless you specifically need StatefulSet features
+
 **Why Stateful Services Are Different:**
 - Deployments assume pods are interchangeable (stateless)
 - Databases need persistent identity and storage
@@ -1414,7 +1438,34 @@ cache = redis.Redis(
 
 ### 6.1 Network Policies (Firewall Rules)
 
-**Deny all traffic by default, allow only what's needed:**
+#### What is a Network Policy?
+
+A **Network Policy** is a specification that defines how groups of pods are allowed to communicate with each other and with other network endpoints. It acts as a firewall at the Kubernetes level, controlling ingress (incoming) and egress (outgoing) traffic for pods.
+
+#### Why use Network Policies?
+
+- **Security:** Implement zero-trust networking by denying all traffic by default
+- **Isolation:** Prevent unauthorized access between different applications or namespaces
+- **Compliance:** Meet regulatory requirements for network segmentation
+- **Defense in depth:** Add an extra security layer beyond application-level controls
+- **Blast radius reduction:** Limit damage if one component is compromised
+
+#### When to use Network Policies?
+
+- **Multi-tenant clusters:** Isolate different teams or customers
+- **Production environments:** Enforce strict communication rules
+- **Microservices:** Allow only necessary service-to-service communication
+- **Sensitive data:** Restrict access to databases, payment services, or PII
+- **Regulatory compliance:** PCI-DSS, HIPAA, or other standards requiring network segmentation
+
+#### Example Use Cases:
+
+1. **Database isolation:** Only allow backend pods to access database, deny all other traffic
+2. **Frontend-backend separation:** Frontend can only talk to API gateway, not directly to databases
+3. **Namespace isolation:** Pods in `production` namespace cannot talk to `development` namespace
+4. **External access control:** Block all outbound internet access except for specific APIs
+
+**Key Concept: Deny all traffic by default, allow only what's needed:**
 
 ```yaml
 apiVersion: networking.k8s.io/v1
@@ -1987,6 +2038,79 @@ spec:
 
 ### 10.2 RBAC (Role-Based Access Control)
 
+#### What is RBAC?
+
+**RBAC (Role-Based Access Control)** is a security mechanism in Kubernetes that regulates who (users, service accounts, groups) can perform what actions (get, list, create, delete) on which resources (pods, services, secrets). It implements the principle of least privilege.
+
+#### Key Components:
+
+1. **ServiceAccount:** Identity for processes running in pods
+2. **Role:** Set of permissions within a namespace
+3. **ClusterRole:** Set of permissions across entire cluster
+4. **RoleBinding:** Grants Role permissions to users/service accounts in a namespace
+5. **ClusterRoleBinding:** Grants ClusterRole permissions cluster-wide
+
+#### Why use RBAC?
+
+- **Security:** Prevent unauthorized access to cluster resources
+- **Least privilege:** Give only minimum necessary permissions
+- **Compliance:** Meet regulatory requirements for access control
+- **Multi-tenancy:** Isolate teams and prevent accidental interference
+- **Audit trail:** Track who can do what in the cluster
+- **Defense in depth:** Even if pod is compromised, limited damage due to restricted permissions
+
+#### When to use RBAC?
+
+- **Production clusters:** Always enable RBAC in production
+- **Shared clusters:** Multiple teams or applications
+- **Service accounts:** Applications that need to interact with Kubernetes API
+- **CI/CD systems:** Control what deployment pipelines can do
+- **External integrations:** Third-party tools accessing cluster (monitoring, logging)
+- **Compliance requirements:** PCI-DSS, SOC2, HIPAA, etc.
+
+#### Common Use Cases:
+
+**Use Case 1: Application reads ConfigMaps/Secrets**
+- App needs to dynamically reload configuration
+- Grant read-only access to specific ConfigMaps/Secrets
+- Deny access to other namespaces or resources
+
+**Use Case 2: CI/CD Pipeline Deployment**
+- Jenkins/GitHub Actions needs to deploy applications
+- Grant create/update permissions for Deployments, Services
+- Deny delete or modify permissions on production namespace
+
+**Use Case 3: Monitoring System**
+- Prometheus needs to discover and scrape pods
+- Grant read-only access to pods, services, endpoints
+- No write permissions needed
+
+**Use Case 4: Developer Access**
+- Developers can view logs, port-forward in dev namespace
+- Read-only access in staging
+- No access to production
+
+#### Permission Verbs:
+
+- `get` - Read a single resource
+- `list` - Read all resources of a type
+- `watch` - Watch for changes to resources
+- `create` - Create new resources
+- `update` - Modify existing resources
+- `patch` - Partially update resources
+- `delete` - Delete resources
+- `deletecollection` - Delete multiple resources
+
+#### Example Scenario:
+
+**Problem:** Your app needs to read Secrets but shouldn't be able to modify them or access other namespaces.
+
+**Solution:**
+1. Create ServiceAccount for app
+2. Create Role with `get` permission for Secrets
+3. Create RoleBinding connecting ServiceAccount to Role
+4. App runs with limited permissions
+
 **Create service account for app:**
 
 ```yaml
@@ -2110,6 +2234,60 @@ kubeseal -f secret.yaml -w sealed-secret.yaml
 ## PART 11: STORAGE AND PERSISTENCE
 
 ### 11.1 Storage Classes
+
+#### What is a StorageClass?
+
+A **StorageClass** provides a way for administrators to describe different "classes" of storage available in a Kubernetes cluster. Different classes might map to quality-of-service levels, backup policies, or arbitrary policies determined by cluster administrators. Think of it as templates for creating storage volumes with different characteristics.
+
+#### Why use StorageClass?
+
+- **Dynamic provisioning:** Automatically creates storage volumes on-demand
+- **Multiple tiers:** Offer different performance levels (SSD vs HDD, fast vs slow)
+- **Provider abstraction:** Same YAML works across AWS, GCP, Azure (with different provisioners)
+- **Cost optimization:** Let users choose appropriate storage tier for their needs
+- **Automatic management:** Kubernetes handles volume creation and deletion
+- **Standardization:** Define company-wide storage policies
+
+#### When to use StorageClass?
+
+- **Cloud environments:** AWS EBS, GCP Persistent Disk, Azure Disk
+- **Multiple storage tiers:** Offer both performance and cost-effective options
+- **Dynamic provisioning:** Don't want to pre-create PersistentVolumes manually
+- **Different workload needs:** Databases need fast storage, logs can use slow storage
+- **Multi-tenancy:** Different teams have different storage requirements
+
+#### Common Storage Classes:
+
+**AWS EBS Types:**
+- `gp3` - General Purpose SSD (balanced price/performance)
+- `io2` - Provisioned IOPS SSD (high performance databases)
+- `st1` - Throughput Optimized HDD (big data, logs)
+- `sc1` - Cold HDD (infrequent access, archives)
+
+**GCP Persistent Disk:**
+- `pd-standard` - Standard HDD
+- `pd-ssd` - SSD
+- `pd-balanced` - Balance between performance and cost
+
+**Azure Disk:**
+- `Standard_LRS` - Standard HDD
+- `Premium_LRS` - Premium SSD
+- `StandardSSD_LRS` - Standard SSD
+
+#### How It Works:
+
+1. Admin creates StorageClass (defines provisioner and parameters)
+2. User creates PVC requesting storage from that class
+3. Kubernetes automatically provisions actual storage (PV)
+4. PVC binds to the new PV
+5. Pod uses PVC to mount storage
+
+#### Example Use Cases:
+
+- **fast:** For databases requiring low latency (SSD, high IOPS)
+- **slow:** For log storage or backups (HDD, cost-effective)
+- **replicated:** For critical data requiring replication
+- **encrypted:** For sensitive data requiring encryption at rest
 
 **Define different storage types:**
 
@@ -2235,6 +2413,64 @@ spec:
 
 ### 12.1 Init Containers (Setup Before App Starts)
 
+#### What are Init Containers?
+
+**Init Containers** are specialized containers that run and complete before the main application containers in a Pod start. They always run to completion and run sequentially (one after another). If any init container fails, Kubernetes restarts the Pod until the init container succeeds.
+
+#### Why use Init Containers?
+
+- **Separation of concerns:** Setup logic separate from application code
+- **Security:** Use different images with different tools (don't bloat app image)
+- **Blocking:** Main app won't start until prerequisites are met
+- **Reusability:** Same init container can be used across multiple apps
+- **Ordering:** Guarantee setup happens before app starts
+
+#### When to use Init Containers?
+
+- **Database migrations:** Run schema changes before app starts
+- **Dependency checking:** Wait for database, cache, or external service to be ready
+- **Configuration generation:** Create config files from templates
+- **Data pre-loading:** Download datasets, warm up caches
+- **Security:** Fetch certificates or secrets from external vaults
+- **Git clone:** Download code or assets before starting app
+- **Permissions setup:** Fix file ownership or permissions on mounted volumes
+
+#### Common Patterns:
+
+**Pattern 1: Wait for Dependencies**
+```
+Wait for database → Wait for Redis → Start application
+```
+
+**Pattern 2: Data Initialization**
+```
+Download dataset → Process data → Start application
+```
+
+**Pattern 3: Security Setup**
+```
+Fetch certificates → Configure TLS → Start application
+```
+
+#### Init Containers vs Regular Containers:
+
+| Feature | Init Containers | Regular Containers |
+|---------|----------------|--------------------|
+| When they run | Before app starts | Throughout pod lifetime |
+| Execution | Run to completion | Run continuously |
+| Order | Sequential | Parallel |
+| Failure handling | Restart pod | Restart container |
+| Resource sharing | Share volumes with app | Share volumes with app |
+| Probes | No liveness/readiness | Have probes |
+
+#### Example Use Cases:
+
+1. **Database Migration:** Run Flyway/Liquibase migrations before starting API server
+2. **Service Dependencies:** Wait for PostgreSQL and Redis to be ready before starting app
+3. **Configuration:** Generate nginx config from environment variables
+4. **SSL Certificates:** Fetch Let's Encrypt certificates before starting web server
+5. **Git Repository:** Clone configuration repository before starting app
+
 ```yaml
 spec:
   template:
@@ -2261,6 +2497,86 @@ spec:
 ```
 
 ### 12.2 Sidecar Containers (Helper Containers)
+
+#### What are Sidecar Containers?
+
+**Sidecar Containers** are additional containers that run alongside the main application container in the same Pod. They run concurrently with the main container and extend or enhance its functionality without modifying the main application code.
+
+#### Why use Sidecar Containers?
+
+- **Separation of concerns:** Keep cross-cutting functionality separate from business logic
+- **Reusability:** Same sidecar can be used with different applications
+- **No code changes:** Add functionality without modifying application
+- **Different languages/tools:** Sidecar can use different tech stack
+- **Shared resources:** Containers in same pod share network and volumes
+- **Co-location:** Sidecar always runs on same node as main app (low latency)
+
+#### When to use Sidecar Containers?
+
+- **Logging:** Forward logs to centralized logging system
+- **Monitoring:** Collect and export metrics
+- **Proxying:** Service mesh proxy (Envoy, Linkerd)
+- **Security:** Add authentication, encryption layer
+- **Data synchronization:** Sync files to/from storage
+- **Secrets management:** Fetch and rotate secrets
+- **Configuration management:** Watch and reload configuration changes
+
+#### Common Sidecar Patterns:
+
+**Pattern 1: Log Aggregation**
+- Main app writes logs to shared volume
+- Sidecar reads logs and ships to Elasticsearch/Splunk
+- Benefit: App doesn't need to know about logging infrastructure
+
+**Pattern 2: Service Mesh Proxy**
+- Main app makes plain HTTP requests to localhost
+- Sidecar proxy handles TLS, retries, circuit breaking, metrics
+- Benefit: App gets advanced networking features for free
+
+**Pattern 3: Secrets Management**
+- Sidecar fetches secrets from Vault/AWS Secrets Manager
+- Writes secrets to shared volume
+- Main app reads secrets from file
+- Sidecar rotates secrets periodically
+
+**Pattern 4: Configuration Watcher**
+- Sidecar watches ConfigMap/external source for changes
+- Updates configuration file on shared volume
+- Main app gets signal to reload configuration
+
+#### Sidecar vs Init Container:
+
+| Feature | Sidecar | Init Container |
+|---------|---------|----------------|
+| Lifetime | Runs continuously | Runs to completion |
+| Purpose | Enhance/extend app | Setup before app starts |
+| When | Concurrent with app | Before app starts |
+| Example | Log forwarder | Database migration |
+
+#### Popular Sidecar Examples:
+
+1. **Fluent Bit / Fluentd:** Log collection and forwarding
+2. **Envoy Proxy:** Service mesh sidecar (Istio, Consul Connect)
+3. **Vault Agent:** Fetch secrets from HashiCorp Vault
+4. **Cloud SQL Proxy:** Secure connection to Cloud SQL databases
+5. **Prometheus Exporter:** Export metrics in Prometheus format
+6. **Git Sync:** Keep files synchronized with Git repository
+
+#### Real-World Example:
+
+**Scenario:** Python web app needs to ship logs to Elasticsearch
+
+**Without Sidecar:**
+- Add Elasticsearch Python library to app
+- Modify code to send logs to Elasticsearch
+- App now coupled to logging infrastructure
+- Need to update code if switching to different logging system
+
+**With Sidecar:**
+- App writes logs to stdout (simple, standard)
+- Fluent Bit sidecar reads stdout, sends to Elasticsearch
+- No code changes needed
+- Switch to Splunk? Just change sidecar configuration
 
 ```yaml
 spec:
@@ -2297,6 +2613,60 @@ spec:
 ```
 
 ### 12.3 Jobs and CronJobs (One-Time and Scheduled Tasks)
+
+#### What is a Job?
+
+A **Job** creates one or more pods and ensures that a specified number of them successfully complete. Jobs are for run-to-completion tasks, unlike Deployments which run continuously. Once the task completes, the pod terminates.
+
+#### What is a CronJob?
+
+A **CronJob** creates Jobs on a time-based schedule, similar to Unix cron. It automatically triggers Jobs at specified times or intervals.
+
+#### Why use Jobs?
+
+- **Guaranteed completion:** Kubernetes ensures the task runs to completion
+- **Automatic retry:** Failed jobs can be automatically retried
+- **Parallelism:** Run multiple pods in parallel for faster processing
+- **Clean termination:** Pods are cleaned up after completion
+- **Different from Deployments:** For finite tasks, not long-running services
+
+#### Why use CronJobs?
+
+- **Automation:** No manual triggering needed
+- **Reliability:** Kubernetes ensures scheduled tasks run even if nodes fail
+- **Kubernetes-native:** Use same YAML configuration, secrets, and ConfigMaps as other workloads
+- **History tracking:** Keep records of successful and failed job runs
+
+#### When to use Jobs?
+
+- **One-time tasks:** Database migrations, data imports, cleanup scripts
+- **Batch processing:** Process a set of files or records
+- **Data transformations:** ETL jobs, report generation
+- **CI/CD pipelines:** Build, test, or deployment tasks
+- **Initialization:** Setup tasks before application starts
+
+#### When to use CronJobs?
+
+- **Periodic backups:** Daily database backups, log archiving
+- **Scheduled reports:** Generate and email reports every Monday
+- **Data synchronization:** Sync data between systems hourly
+- **Cleanup tasks:** Delete old files, prune logs, vacuum databases
+- **Health checks:** Periodic system validation or smoke tests
+- **Certificate renewal:** Automatically refresh SSL certificates
+
+#### Example Use Cases:
+
+**Job Examples:**
+- Run database schema migration before deploying new app version
+- Process uploaded files in batch (convert images, transcode videos)
+- Send bulk emails or notifications
+- Generate monthly invoice reports
+
+**CronJob Examples:**
+- `0 2 * * *` - Daily backup at 2 AM
+- `*/15 * * * *` - Check for new data every 15 minutes
+- `0 0 * * 0` - Weekly cleanup every Sunday at midnight
+- `0 9 * * 1-5` - Weekday morning report at 9 AM
 
 **One-time job (database backup):**
 
@@ -2417,6 +2787,47 @@ helm install autoscaler autoscaler/cluster-autoscaler \
 ```
 
 **Horizontal Pod Autoscaling (HPA):**
+
+#### What is Horizontal Pod Autoscaler (HPA)?
+
+A **HorizontalPodAutoscaler** automatically scales the number of pods in a Deployment, ReplicaSet, or StatefulSet based on observed CPU utilization, memory usage, or custom metrics. It increases or decreases the replica count to match demand.
+
+#### Why use HPA?
+
+- **Cost optimization:** Scale down during low traffic to save resources
+- **Performance:** Automatically add capacity during traffic spikes
+- **Availability:** Maintain SLA by ensuring enough pods to handle load
+- **No manual intervention:** Responds to traffic patterns automatically
+- **Resource efficiency:** Match actual demand instead of over-provisioning
+
+#### When to use HPA?
+
+- **Variable traffic patterns:** Applications with predictable or unpredictable spikes (e-commerce during sales, news sites during breaking news)
+- **Background workers:** Scale based on queue depth or job backlog
+- **API services:** Scale based on request rate or response time
+- **Batch processing:** Scale workers based on pending tasks
+- **Cost-sensitive applications:** Where you want to minimize idle resources
+
+#### When NOT to use HPA?
+
+- **Stateful applications with complex scaling:** Databases that require manual intervention for scaling
+- **Constant traffic:** If load is always the same, just set fixed replicas
+- **Sub-second scaling needs:** HPA has evaluation delay (default 15s), not suitable for instant bursts
+- **Single-instance requirements:** Applications that must run exactly one instance
+
+#### How HPA Works:
+
+1. **Metrics collection:** Every 15 seconds (default), HPA queries metrics from Metrics Server
+2. **Calculate desired replicas:** `desiredReplicas = ceil[currentReplicas * (currentMetric / targetMetric)]`
+3. **Scale decision:** If desired differs from current, initiate scaling
+4. **Cooldown:** Wait before scaling again (default: 5 min scale down, 3 min scale up)
+
+#### Example Scenario:
+
+- Current: 3 pods, each at 90% CPU
+- Target: 70% CPU average
+- Calculation: `3 * (90/70) = 3.86` → rounds up to **4 pods**
+- HPA increases replicas to 4
 
 ```yaml
 apiVersion: autoscaling/v2
