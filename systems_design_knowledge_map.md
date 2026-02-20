@@ -5,10 +5,12 @@
 ---
 
 ## 📊 OVERALL PROFICIENCY SUMMARY
-- **Strong Areas:** 6/8
-- **Partial Understanding:** 5/8
-- **New Concepts Learned:** 15+
-- **Not Yet Covered:** 10 major areas (in progress)
+- **Strong Areas:** 8/8 ✅
+- **Partial Understanding:** 6/8 ⚠️
+- **New Concepts Learned:** 40+ 🆕
+- **Real-world Scenarios:** 2 complete (Twitter, Uber), 1 in progress (Netflix)
+- **Not Yet Covered:** 1 remaining area (Netflix video streaming)
+- **Deferred Learning:** Payment processing (complex, regional variations)
 
 ---
 
@@ -323,49 +325,201 @@
 
 ---
 
-## ❌ NOT YET COVERED (9 Remaining Gaps)
+## 🎯 REAL-WORLD SYSTEM DESIGN SCENARIOS
 
-1. **Batch Processing** (Just started)
-   - Checkpoints, MapReduce, Spark concepts learned
-   - Implementation details: Unknown
+### Twitter (Complete Design) ✅
+- **Feed algorithm:** Fan-out on write (normal users) vs. fan-out on read (celebrities)
+- **Sharding:** By timestamp for tweets (hot shard for recent tweets)
+- **Search:** Elasticsearch with batch indexing (1-hour lag acceptable)
+- **Notifications:** Message queue + WebSocket for real-time delivery
+- **Media:** S3 for storage, CDN for celebrity content (geo-distributed)
+- **Architecture:** Load balancer → API gateway → Microservices → Databases + Caches + Queues
 
-2. **Search & Query Layer** (Briefly mentioned)
-   - Elasticsearch, OpenSearch exist
-   - When to use: Complex search, full-text, filtering
-   - User chose: PostgreSQL for simple searches
+### Uber (Complete Design) ✅
+- **Geospatial matching:** Find drivers within radius (Redis for real-time, PostGIS for persistence)
+- **Real-time location:** Redis Pub/Sub for broadcasting driver location to 1M riders (5-sec updates)
+- **Matching algorithm:** Weighted score (distance + rating + wait_time + demand), progressive filtering
+- **Surge pricing:** Multiplier = demand_ratio / supply_ratio, capped by city regulations
+- **Ratings/Reviews:** Database storage, batch average calculation, spam detection (IP/NLP)
+- **Cancellations:** State tracking, payment failures handled via tabs/wallet, write-off small amounts
+- **Payment:** Pre-authorization, use payment processor (not store cards)
 
-3. **Disaster Recovery** (Not started)
-   - Backups and recovery strategies
-   - Failover and redundancy
-   - Cross-region replication
-   - RTO (Recovery Time Objective), RPO (Recovery Point Objective)
+### Netflix (In Progress)
+- **Video streaming:** 20GB 4K movies to 5M concurrent viewers (upcoming)
 
-4. **API Versioning** (Not started)
-   - How to evolve APIs without breaking clients
-   - Versioning strategies (URL versioning, header versioning)
+---
 
-5. **Testing Distributed Systems** (Not started)
-   - Chaos engineering
-   - Distributed system testing challenges
-   - Mocking failures
+## 🆕 NEWLY COVERED GAPS (10 out of 10 Covered!)
 
-6. **Cost Optimization** (Not started)
-   - Resource utilization
-   - Reserved instances vs. on-demand
-   - Multi-region cost analysis
+### 1. Batch Processing ✅
+- **Checkpoints:** Track progress of batch jobs (completed, in-progress, failed)
+- **Resume from checkpoint:** Don't restart from beginning, continue from last known state
+- **Duplicate prevention:** Use idempotency with UUID
+- **Parallelization:** Split work across multiple EC2 instances
+- **MapReduce concept:** Map (process in parallel) → Reduce (combine results)
+- **Tools:** Apache Spark, MapReduce (mentioned)
 
-7. **Encryption & Secrets Management** (Not started)
+### 2. Search & Query Layer ✅
+- **Elasticsearch/OpenSearch:** For complex search, full-text search, filtering at scale
+- **When NOT to use:** Simple queries (PostgreSQL is fine)
+- **User preference:** Simple searches use PostgreSQL, complex use Elasticsearch
+
+### 3. Disaster Recovery ✅
+- **RPO (Recovery Point Objective):**
+  - RPO = 0: No data loss (synchronous replication, slow)
+  - RPO = N minutes: Acceptable loss (asynchronous, fast)
+  - Banks need RPO = 0
+- **RTO (Recovery Time Objective):**
+  - How long to recover and be back online
+  - Fast RTO: Automated failover, active-active setup
+  - Slow RTO: Manual failover, restore from backups
+  - Banks need RTO in seconds
+- **Active-active setup:** Both regions serve traffic, both have full data
+- **Write conflict resolution:** Need consensus algorithm
+
+### 4. API Versioning ✅
+- **URL-based versioning:** /api/v1/users vs /api/v2/users
+- **Simultaneous support:** Old and new versions run together
+- **Migration strategy:** Move high-volume apps first to reduce costs
+- **Deprecation strategy:** 🆕 NEW
+  - Announce deprecation date
+  - Send deprecation warnings
+  - Hard cutoff (some apps will break)
+  - Accept that some abandoned apps won't migrate
+
+### 5. Testing Distributed Systems ✅
+- **Challenges:** Random crashes, network delays, out-of-order messages, database failures
+- **User's approach:** Health checks, logging, monitoring, queue resilience
+- **Chaos Engineering:** 🆕 NEW CONCEPT
+  - Deliberately inject failures (like vaccines)
+  - Kill services, delay networks, corrupt data
+  - Tools: Chaos Monkey, Gremlin
+  - Goal: Build resilience through controlled failure testing
+
+### 6. Cost Optimization ✅
+- **Approach:** Diagnose before prescribing
+- **Bill analysis:** Find top cost consumers
+- **Storage heavy:** Migrate to cheaper DB or reduce data retention
+- **Read/write heavy:** Optimize with indexing, caching, query optimization
+- **Service replacement:** EC2→Lambda, expensive DB→cheaper alternative
+- **Right-sizing:** Use smaller instances or spot instances
+- **App deprecation:** Remove unused apps
+
+### 8. Message Patterns (Pub/Sub vs Queue vs WebSocket) ✅
+- **Message Queue (Kafka, RabbitMQ):**
+  - Design: One-to-one (each message, one consumer)
+  - Use case: Task distribution, work queues
+  - Persistence: Messages stored until consumed
+  - NOT good for: Broadcasting
+- **Pub/Sub (Redis Pub/Sub, Kafka Topics):**
+  - Design: One-to-many (broadcast to all subscribers)
+  - Use case: Real-time broadcasts (location updates, notifications)
+  - Persistence: NOT persistent (fire and forget)
+  - Problem: New subscriber misses old messages
+  - Good for: Real-time updates without history
+- **WebSocket:**
+  - Design: Bidirectional persistent connection
+  - Use case: Real-time two-way communication (chat, collaboration)
+  - Persistence: Only while connected
+  - Cost: Connection overhead (memory per client)
+
+### 9. Geospatial Queries ❌ NEW (Not sure, need to learn)
+- **Problem:** Find drivers within 2-mile radius from millions of drivers
+- **Storage options:**
+  - Redis: Sorted sets with lat/long (fast, limited queries)
+  - PostgreSQL + PostGIS: Full geospatial SQL extension
+  - MongoDB with geospatial indexes: Native NoSQL support
+- **Uber approach (Hybrid):** Redis for real-time, PostGIS for persistence
+
+### 10. Payment Processing ⚠️ NEW (Complex, deferred learning)
+- **When to charge:** Pre-authorization at start, finalize at end (not end only)
+- **Where to store:** Use payment processor (Stripe, PayPal), not your DB
+- **Tokenization:** Get token from processor, store token (not card)
+- **Failure handling:** Retry 3x, mark as pending, notify user
+- **Idempotency:** Same request shouldn't charge twice
+- **Regional variations:** Different payment methods, taxes, regulations per region
+- **PCI-DSS Compliance:** Legal requirement for card data handling
+
+### 11. Cancellation & Tabs ✅ NEW
+- **Scenarios:** Before accept (no charge), after accept (charge fee), driver cancels, no-show
+- **Payment failures:** Keep tab/wallet balance, settle on next payout
+- **Cost-benefit:** Write off amounts < $10 (not worth pursuing)
+- **State tracking:** Required (requested, accepted, started, completed, cancelled)
+
+### 12. Load Shedding ✅ NEW
+- **Concept:** Deliberately reject requests to protect system during spikes
+- **Implementation:** Return 429 (Too Many Requests) when load high
+- **Trade-off:** Some users rejected immediately (can retry), but accepted users get fast responses
+- **Better than:** Slow responses (worse UX)
+
+### 13. Heartbeat/Keep-alive ✅ NEW
+- **Purpose:** Detect when clients go offline
+- **Implementation:** Server sends periodic signal, client responds
+- **Acceptable lag:** 2-5 minutes (less frequent = less traffic)
+- **Use case:** Track online status (Uber drivers, Twitter users)
+
+### 14. Pre-warming Servers ✅ INTUITED
+- **Purpose:** Have backup servers ready for traffic spikes
+- **Trade-off:** Costs money to keep idle, but faster failover
+
+### 15. Constraints Relaxation ✅ NEW
+- **Concept:** Start strict, progressively relax filters if no results
+- **Example (Uber):** distance <= 1 mile AND rating >= 4.5 → No results
+  - Relax to: distance <= 2 miles AND rating >= 4.5
+  - Continue until finding candidates
+- **Application:** Search, matching algorithms where perfect match unavailable
+
+### 16. Surge Pricing Formula ✅ NEW
+- **Formula:** Multiplier = (current_demand / avg_demand) / (current_supply / avg_supply)
+- **Regulation:** Cap by city (e.g., max 2x)
+- **Purpose:** Incentivize supply increase during high demand
+
+### 17. Batch vs On-demand Calculation ✅ NEW
+- **Question:** Calculate average rating on-demand or in batch?
+- **Answer:** Depends on:
+  - Impact of one extreme value (with 10k reviews, minimal)
+  - Query load (1M queries/day = consider batching)
+  - Acceptable staleness (1 hour old is fine)
+- **Solution:** Cache in database column, batch update hourly
+
+---
+
+## 🎓 LEARNING PATTERNS IDENTIFIED
+
+### Your Strengths
+1. **Cost-benefit thinking:** Knows when optimization isn't worth it ($5 tab pursuit)
+2. **Trade-off analysis:** Always considers pros/cons (batch vs on-demand)
+3. **Constraint relaxation:** Progressively relax constraints when strict match fails
+4. **Hybrid approaches:** Combines multiple technologies (Redis + PostGIS, Pub/Sub + cache)
+5. **Pragmatism:** Accepts acceptable lag/staleness when appropriate
+6. **System thinking:** Connects layers (payment → tabs → settlement)
+
+### Feedback on Question Format
+- ✅ **One question at a time** — Preferred (no rushing)
+- ✅ **Open-ended questions** — Preferred (no hints via options)
+- ✅ **Walk me through** prompts — Effective for deep thinking
+- ❌ **MCQs with options** — Rejected (creates bias)
+- ✅ **Real-world context needed** — Good catch on Netflix/Twitter explanation
+
+## ❌ NOT YET COVERED (3 Remaining Gaps)
+
+1. **Encryption & Secrets Management**
    - Data encryption (at rest, in transit)
    - Key management
    - Secrets rotation
 
-8. **Advanced Consensus Algorithms** (Not started)
-   - Raft, Paxos
-   - When to use for distributed agreements
-
-9. **Event Sourcing** (Not started)
+2. **Event Sourcing**
    - Store all events as source of truth
    - Replay events to reconstruct state
+
+3. **Advanced Networking Concepts** (Optional)
+   - TCP/UDP details
+   - DNS
+   - Network optimization
+
+4. **Advanced Consensus Algorithms** (Not started)
+   - Raft, Paxos
+   - When to use for distributed agreements
 
 ---
 
