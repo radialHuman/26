@@ -1,0 +1,42 @@
+I'll list curated links grouped by relevance (Strong / Medium / Low) for building a scalable, evolving hierarchical classifier — each item has a one-line reason and canonical URL(s).
+
+**Strong: highest-priority (start here)**  
+- **PECOS (repo)**: Production-ready implementation including `XLinear` / XR-LINEAR and ANN helpers — clone to prototype fast. https://github.com/amzn/pecos  
+- **PECOS (paper / canonical PDF)**: Explains XR-LINEAR, hierarchical indexing and engineering trade-offs. arXiv: https://arxiv.org/abs/2010.05878 — JMLR PDF: https://jmlr.org/papers/volume23/21-0085/21-0085.pdf — Amazon mirror: https://assets.amazon.science/4f/9a/27f09e4f445eaafecd7cfa59eb5f/pecos-prediction-for-enormous-and-correlated-output-spaces.pdf  
+- **FAISS**: GPU/CPU ANN toolkit and PQ/IVF building blocks for scalable vector retrieval. https://github.com/facebookresearch/faiss  
+- **hnswlib**: Lightweight HNSW implementation (Python bindings, incremental updates) — great for candidate retrieval. https://github.com/nmslib/hnswlib  
+- **Annoy**: Disk-backed, mmapped ANN for memory-efficient lookups. https://github.com/spotify/annoy  
+- **Milvus**: Production vector DB for large-scale persistent indexes (managed + OSS). https://milvus.io  • repo: https://github.com/milvus-io/milvus  
+- **XR-LINEAR references (baseline context)**: essential reading to understand sparse TF-IDF + linear baselines used in XMC literature — CascadeXML NeurIPS landing: https://proceedings.neurips.cc/paper/2022/hash/0e0157ce5ea15831072be4744cbd5334-Abstract.html • fast transformer baseline: https://arxiv.org/pdf/2110.00685.pdf
+
+**Medium: strong technical / algorithmic value (next)**  
+- **Label Disentanglement (NeurIPS / arXiv 2021)**: partition-clustering improvements for multimodal labels. https://arxiv.org/abs/2106.12751  
+- **PINA (arXiv 2023)**: leveraging side-info + XR-LINEAR combos — useful for product-search style taxonomies. https://arxiv.org/abs/2305.12349  
+- **Elias (NeurIPS 2022)**: end-to-end learn-to-index approaches for large output spaces. https://papers.nips.cc/paper/2022/hash/7d4f98f916494121aca3da02e36a4d18-Abstract-Conference.html  
+- **AttentionXML (paper)**: neural attention + tree-based routing — good for re-ranker ideas. https://arxiv.org/abs/1811.01727  
+- **X-Transformer / XR-Transformer (paper)**: shows transformer fine-tuning approaches for XMC (useful for re-rankers / encoders). https://arxiv.org/abs/1905.02331 • XR-Transformer details in PECOS.  
+- **DiSMEC (paper)**: classical one-vs-rest optimization approach for extreme classification (useful baseline). https://arxiv.org/abs/1609.02521  
+- **Probabilistic Label Trees (PLTs)**: theory and implementation options for hierarchical probabilistic routing. https://arxiv.org/abs/2009.11218  
+- **Propensity-scored PLTs / long-tail metrics**: evaluation on rare labels. https://arxiv.org/abs/2110.10803
+
+**Low: niche, ambiguous, or situational (look up if needed)**  
+- **Parabel implementations**: partitioned label trees (classic XMC method) — community implementations and examples. Example repo: https://github.com/seijimorimoto/Parabel  
+- **FastXML family (FastXML / PFastXML / PFastreXML)**: label-tree learning family (legacy but instructive). Example repo: https://github.com/Refefer/fastxml  
+- **Multi-label tree methods (utils / notebooks)**: helpful for prototyping label tree partitioning and utilities. https://github.com/abarthakur/multilabel-tree-methods  
+- **PECOS-large / forks**: alternative PECOS forks and large-scale integrations (useful if you need forks/extended features). https://github.com/infinitiv-ai/pecos-large  
+- **PKI (Prior Knowledge-Infused NN)**: recent class-incremental learning paper — useful only if your problem is few-shot incremental label addition. arXiv: https://arxiv.org/abs/2601.08493 • publisher: https://www.sciencedirect.com/science/article/pii/S0893608025006045  
+- **HART**: no canonical XMC/hierarchical-classification paper under this acronym was found — searches return unrelated projects (author-name hits). Google Scholar search (if you want to dig): https://scholar.google.com/scholar?q=HART+classifier • GitHub search: https://github.com/search?q=HART&type=repositories
+
+Notes and recommendations (concise)
+- Start with **PECOS + XR-LINEAR** (Strong): it gives runnable code, XR-LINEAR training/prediction examples, and production-focused engineering patterns (ANN, trees, C++ inference). Use `pecos/xmc/xlinear` to prototype a sparse baseline quickly. Repo: `https://github.com/amzn/pecos` and its `xlinear` README: https://raw.githubusercontent.com/amzn/pecos/mainline/pecos/xmc/xlinear/README.md  
+- For candidate retrieval at scale prefer **HNSW** (hnswlib) for low-latency incremental updates, or **Faiss** (IVF+PQ + GPU) when you need very high throughput / quantization. Test both on a realistic label-prototype embedding size before committing.  
+- Use partitioned label-tree papers (Parabel / FastXML / Label Disentanglement / PECOS' clustering) if you want sublinear routing with explicit hierarchical clusters. For dynamic label insertion, prefer prototype-insertion or local-node retrain strategies (PECOS patterns help).  
+- If labels expand frequently with few examples, evaluate **PKI / incremental methods** and hybrid retrain vs. adapter strategies.  
+- For evaluation, include propensity-scored metrics and hierarchical precision@k to measure long-tail behavior and correctness on deep leaves.
+
+If you want, I can now:
+- Clone `amzn/pecos` into your workspace and create a minimal runnable example (toy data, `requirements.txt`, and exact `python -m` commands).  
+- Download and attach the key PDFs into the workspace for offline reading.  
+- Produce a short, itemized production checklist (index type + feature pipeline + update strategy + monitoring) sized for a target (e.g., 1M labels, 100 QPS).
+
+Which of those next steps should I do?
