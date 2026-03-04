@@ -349,6 +349,309 @@
 
 ---
 
+## 🔍 DEEP DIVE: DATABASE INTERNALS
+
+### B-Tree Indexes ✅
+- **Problem:** Find one record among 100M (scan all = slow)
+- **Solution:** B-tree index with pointers
+- **How it works:** Balanced tree structure, log(N) lookups instead of N
+- **Example:** Find id=123 takes ~27 comparisons (not 100M)
+- **Trade-off:** Faster reads, slower writes (index updates needed)
+
+## 🔍 DEEP DIVE: CACHING
+
+### Cache Invalidation Failures ✅
+- **Problem:** Cache invalidation fails while database is updated
+  - Database has new data, cache has old data (stale)
+  - Inconsistency until cache TTL expires or Redis recovers
+- **Solution: Cache-Aside Pattern (Lazy Loading)**
+  - Cache miss → Query database (always fallback works)
+  - Even if cache fails, get correct data from DB
+  - Trade-off: Some requests slow (100ms), but always correct
+- **Key insight:** Cache is optional optimization, not mandatory
+
+### Cache Stampede (Thundering Herd) ✅
+- **Problem:** Cache expires, 10,000 concurrent requests hit DB simultaneously
+- **Impact:** Database overload spike, cascading slowdown, more cache misses
+- **Solutions:**
+  - Probabilistic early expiration: Refresh cache before TTL (spread load over 5 min)
+  - Lock-based refresh: First request locks & refreshes, others wait for updated cache
+  - Only ONE database query (not 10,000)
+- **Prevention:** Single-threaded cache updates (use locks/semaphores)
+
+### Cache Coherence in Distributed Systems ✅
+- **Problem:** Invalidate cache across 10+ servers consistently
+- **Approaches:**
+  - Direct API calls: ❌ Unreliable (timeouts, failures)
+  - Broadcast message queue: ✅ Better (persistent, eventually consistent)
+  - Versioned cache: ✅ Alternative (detect stale with version mismatch)
+- **Persistent queue solution (Kafka):**
+  - Database publishes "cache invalidated" to queue
+  - Servers subscribe and consume messages
+  - Queue persists messages on disk (survives crashes)
+  - Offline servers consume messages when back online
+  - Trade-off: Eventual consistency (few minutes acceptable)
+- **Failure scenarios:**
+  - Server offline: Queue holds message, delivered on restart
+  - Queue broker crashes: Other replicas have copy
+  - All brokers crash: Message lost (rare, accepted risk)
+- **Real solution:** 3+ broker replication (Kafka) + TTL + monitoring
+
+### Cache Warming ✅
+- **Problem:** Cold start (empty cache at startup = first requests miss)
+- **Thundering herd:** Many first requests hit DB simultaneously
+- **Predictive cache warming:**
+  - Analyze historical patterns: 80% of requests for celebrity profiles
+  - Preload hot data at startup (top 1000 profiles)
+  - Cold data loaded on-demand (cache-aside)
+- **Implementation:**
+  - Synchronous: Wait for cache load before starting (slower startup)
+  - Asynchronous: Start immediately, warm in background (better UX)
+  - Hybrid: Preload critical data, rest on-demand
+- **Trade-off:** Startup time vs. initial cache hit rate
+
+### Distributed Caching Scaling ✅
+- **Problem:** Single Redis instance bottleneck (50k ops/sec, need 100k+)
+- **Horizontal scaling approaches:**
+
+  **Consistent Hashing:**
+  - Map keys to servers using circular ring (not modulo)
+  - Adding server affects ~10-20% of keys (not all)
+  - Better than modulo hashing (which remaps 90% of keys)
+  - When Server 11 added to 10-server cluster:
+    - Old: hash(key) % 10 → All mappings change
+    - Consistent: Ring adjusted → Only keys in new server's range move
+  - Trade-off: More complex algorithm, but minimal cache invalidation on scale
+
+  **Virtual Nodes:**
+  - Prevent hot spots where many keys hash to same server
+  - Each physical server has multiple positions on ring
+  - Hot servers get more virtual nodes
+  - Example: Server B has 3 virtual nodes, Server A has 1
+  - Load distributed across server's virtual node copies
+  - Allows scaling individual servers independently
+
+  **Full Replication for Ultra-Hot Keys:**
+  - Copy key to ALL servers (not distributed)
+  - Any request gets local copy (zero latency)
+  - Example: Celebrity profile (1M requests/sec)
+  - Trade-off: More storage (replicated on all servers), complex updates
+  - When celebrity updates profile:
+    - Must invalidate on ALL servers
+    - Broadcast invalidation message to all
+    - More coordination overhead
+
+- **When to use each:**
+  - Normal keys (100-1000 req/sec): Consistent hashing (distributed)
+  - Hot keys (10k-100k req/sec): Virtual nodes (more instances)
+  - Ultra-hot keys (1M+ req/sec): Full replication (all servers)
+
+### Multi-Level Cache Hierarchies ✅
+- **Three-tier caching:**
+  - L1: Local cache (in-app memory, ultra-fast, ~1µs)
+  - L2: Distributed cache (Redis, shared, ~1ms)
+  - L3: Database (persistent, ~100ms)
+- **Request flow:**
+  - L1 miss → L2 hit → Return + Update L1 (1ms)
+  - L2 miss → L3 hit → Return + Update L2 + L1 (100ms)
+- **L1 Cache size constraints:**
+  - App server memory: 2GB total
+  - App code: 500MB, Runtime: 500MB, L1 cache: 1GB max
+  - Can cache ~1M keys (if 1KB per key)
+  - Must select which keys to cache (can't cache all 10M)
+
+### Ensuring L1 Cache Coherence ✅
+- **Problem:** 10 app servers, each with L1 cache = Different values possible
+- **Approaches:**
+
+  **Broadcast Invalidation:** ❌ Unreliable
+  - Misses: If server offline when broadcast sent → L1 stays stale
+  - Complex coordination
+
+  **Periodic Checks:** ❌ Expensive
+  - Every 30 seconds: Check if L1 version == L2 version
+  - Lots of version comparisons, inefficient
+
+  **TTL on L1:** ✅ Practical
+  - L1 cache TTL: 30 seconds (much shorter than L2)
+  - After TTL, fetch fresh from L2
+  - Ensures staleness at most 30 seconds
+  - Trade-off: More L2 hits (every 30 seconds)
+
+  **Versioning:** ✅ Best approach
+  - Store version number with key (+4 bytes per key = negligible)
+  - On request: Compare L1 version with L2 version
+  - Mismatch → L1 stale → Fetch from L2
+  - Always detects staleness, no missed invalidations
+  - No extra storage cost (version = 4 byte integer)
+
+### Selecting Hot Keys for L1 Cache ✅
+- **Constraint:** Only 1M of 10M keys fit in L1 (1GB limit)
+- **Must choose which keys to cache:**
+
+  **Offline Analysis (Batch Job):**
+  - Every night: Analyze logs → Find top 1M accessed keys
+  - Build preload list: [profile_1, profile_50, tweet_200, ...]
+  - Restart app servers with new list
+  - Problem: Hours to restart, misses recent trends
+
+  **Online LFU (Least Frequently Used):**
+  - Track: access_count per key
+  - On request: Increment counter for that key
+  - Cache full → Evict least frequently used
+  - Always optimized to current traffic patterns
+  - Cost: ~1 microsecond overhead per request (acceptable)
+
+  **Hybrid Approach:** ✅ Best
+  - L1: Online LFU tracking (optimal, small overhead)
+  - L2: Simple TTL (no tracking, Redis is fast)
+  - Result: L1 stays optimal, L2 stays simple
+
+---
+
+## 🔍 DEEP DIVE: MESSAGE QUEUES
+
+### Message Queue Storage & Durability ✅
+- **Problem:** Service A produces 1000 msg/sec, Service B consumes 100 msg/sec
+  - Without queue: 900 messages/sec dropped (data loss)
+  - With queue: Messages buffered, Service B consumes at own pace
+- **Storage approach: Hybrid (Memory + Disk + Replication)**
+  - Step 1: Write to memory buffer (fast)
+  - Step 2: Flush to disk periodically (durable, survives crashes)
+  - Step 3: Replicate to other brokers (redundancy, survives broker failure)
+
+### Durability Guarantees (Kafka acks) ✅
+- **acks=0:** Confirm immediately (FASTEST, no durability)
+  - Use case: Metrics, non-critical (data loss acceptable)
+- **acks=1:** Confirm after disk write (MEDIUM safety)
+  - Use case: Balance between speed and safety
+- **acks=all:** Confirm after replicated to ALL brokers (SAFEST, SLOWEST)
+  - Use case: Critical data (financial, emails, orders)
+- **Trade-off:** Latency vs. Durability
+
+### Message Ordering & Partitioning ✅
+- **Problem:** Multiple partitions = Out-of-order processing
+- **Solution: Partition by key (e.g., account_id)**
+  - All messages for same account → Same partition
+  - Partition consumed sequentially (ordering guaranteed)
+  - Different accounts processed in parallel (scalable)
+- **Trade-off:** ✅ Ordering guaranteed, ✅ Parallelism, ❌ Hot key bottlenecks partition
+- **Key insight:** Partition for causality (local ordering, not global)
+
+### Offset Management ✅
+- **Problem:** Consumer crashes, where to resume?
+- **Solution: Store offset in Kafka (persistent)**
+  - Offset = "Last successfully processed message"
+  - On restart: Resume from next message (avoid duplicate)
+
+### Delivery Guarantees & Idempotency ✅
+- **At-least-once:** Message might process multiple times
+- **Exactly-once:** Hard to achieve (requires distributed transactions)
+- **Practical: Idempotent processing** ✅
+  - Each message has transaction_id
+  - Check: "txn_id already processed?" (cache + DB)
+  - If yes → Skip, If no → Process and record
+  - Even if duplicated, same result
+- **Storage:** Cache (fast) + Database (persistent)
+
+---
+
+## INDEX STRATEGY (CONTINUED)
+- **When to index:** Frequently queried, high cardinality, high read-to-write ratio
+- **Single index:** Smaller, less overhead, partial speedup
+- **Composite index:** (user_id, created_at) = Full speedup for multi-column queries
+- **Decision:** Based on query patterns and cost-benefit
+
+### Locking & Concurrency ✅
+- **Problem:** Two users updating same row simultaneously
+- **Solution:** Locking (mutex-like, one user locks, others wait)
+- **Isolation (ACID I):** Prevents concurrent interference
+- **Deadlock:** Two users waiting for each other's locks
+- **Prevention strategies:**
+  - Lock ordering: Always acquire locks in same order (BEST for banking)
+  - Timeout: Kill transaction if lock not acquired (risky, causes retries)
+  - Deadlock detection: Monitor and kill victim transaction (automatic recovery)
+
+### COUNT(*) Optimization ✅
+- **Naive:** Scan all 100M rows (10+ seconds, SLOW)
+- **Exact count:** Store in column, update on insert (bottleneck: lock contention)
+- **Approximate count:** Sample/estimate, update daily (NO contention, good enough)
+- **Twitter approach:** Approximate + round for display (1.5K, 5M)
+
+### Query Optimization ✅
+- **Query Optimizer:** Chooses best execution plan
+- **Uses statistics:** Min/max values, distinct counts, data distribution
+- **Execution plans:**
+  - Full table scan: If many rows match (low selectivity)
+  - Index scan: If few rows match (high selectivity)
+- **If stats wrong:** Optimizer picks bad plan (slow query)
+- **Update frequency:** Based on write speed (high writes = frequent updates)
+
+### EXPLAIN Command ✅
+- **Purpose:** Shows execution plan for a query
+- **Reveals:** Which indexes used (or not used), estimated vs actual rows
+- **Problems it identifies:**
+  - Full scan when index available → Update statistics
+  - Wrong index used → Create better index
+  - Query inefficient → Rewrite query
+  - Missing index → Create index
+
+### Isolation Levels ✅
+- **Read Uncommitted:** See uncommitted changes (DANGEROUS)
+- **Read Committed:** See only committed changes (SAFE)
+- **Repeatable Read:** Consistent snapshot (SAFER)
+- **Serializable:** Behave as if one-at-a-time (SAFEST, for banking)
+- **Trade-off:** Higher isolation = Slower performance
+
+### MVCC (Multi-Version Concurrency Control) ✅
+- **Concept:** Store multiple versions of each row
+- **How it works:**
+  - Transaction A writes new version (uncommitted)
+  - Transaction B reads old version (committed)
+  - Both proceed simultaneously (no locking)
+- **Benefits:** No blocking, fast concurrent access
+- **Cost:** Table grows (multiple versions per row)
+- **Solution:** VACUUM command (garbage collect old versions)
+- **Metadata tracks:** Which transaction created version, if committed, visibility rules
+
+### Write-Ahead Log (WAL) ✅
+- **Purpose:** Durability (survive crashes)
+- **How it works:**
+  - Step 1: Write operation to log on disk
+  - Step 2: Write to memory/buffer (fast)
+  - Step 3: Confirm to user (success)
+  - Step 4: Later, flush memory to database file on disk
+- **Safety:** If crash between 3 & 4, log exists → Can replay on recovery
+- **Best practice:** Log on different disk than database (survive disk failure)
+
+### Replication Durability ✅
+- **Synchronous replication:** Wait for backup confirmation (RPO=0, slow)
+  - Good for: Banking, critical transactions
+- **Asynchronous replication:** Confirm immediately, replicate later (RPO=5min, fast)
+  - Good for: Social media, non-critical
+- **Risk:** Primary + backup crash = Data in memory lost
+- **Mitigation:**
+  - Log on separate disk (survives primary crash)
+  - Third replica in different region (survives primary+backup)
+  - If primary fails, log + third replica enable recovery
+
+### Distributed Transactions ✅
+- **Problem:** Multiple databases, one operation (DB A succeeds, DB B fails)
+- **Two-Phase Commit:** ❌ Problematic (locks, blocks on slow participants)
+- **Saga Pattern:** ✅ Better (independent steps, compensation on failure)
+- **Eventual Consistency:** ✅ Practical approach
+  - Primary operation: Synchronous (immediate)
+  - Secondary operation: Asynchronous (queued)
+  - Retry queue with exponential backoff
+  - Eventually consistent within acceptable window
+
+### Acceptable Consistency Windows ✅
+- **Banking:** < 5 minutes (regulatory requirement for audit logs)
+- **Social media:** < 1 hour (non-critical)
+- **Analytics:** < 1 day (very non-critical)
+
+---
+
 ## 🆕 NEWLY COVERED GAPS (10 out of 10 Covered!)
 
 ### 1. Batch Processing ✅
@@ -517,10 +820,6 @@
    - DNS
    - Network optimization
 
-4. **Advanced Consensus Algorithms** (Not started)
-   - Raft, Paxos
-   - When to use for distributed agreements
-
 ---
 
 ## 📈 LEARNING STYLE & STRENGTHS
@@ -585,3 +884,287 @@
 **Total learning time this session:** ~2 hours  
 **Concepts covered:** 25+  
 **Next review:** Whenever resuming
+
+---
+
+## 🔍 DEEP DIVE: NETWORKING
+
+### Geographic Distribution & Latency ✅
+- **Problem:** Users far from database = High latency
+  - Physics limit: Speed of light = 186,000 miles/second
+  - NY to California: 2500 miles = 13.5ms minimum latency
+  - NY to California and back: 27ms minimum
+- **Solution: Replicate data closer to users**
+  - East coast users: Query NY database (13.5ms)
+  - Central users: Query Central replica (13.5ms)
+  - West coast users: Query West replica (13.5ms)
+  - Result: All users same latency (physics-limited)
+
+### Read-After-Write Consistency Problem ✅
+- **Problem:** When data updated in NY, replicas are stale
+  - User in NY writes profile → NY database updated
+  - Replication to West coast: 27ms delay
+  - User in West reads immediately → Gets old data (stale)
+- **Two approaches:**
+  - **Strong consistency:** Wait for all replicas before confirming write
+    - Cost: 50-75ms latency (user waits for replication)
+    - Benefit: All regions have same data
+    - Use case: Banking, financial (correctness critical)
+  - **Eventual consistency:** Return immediately, replicate later
+    - Cost: Temporary stale data (seconds)
+    - Benefit: Fast response (no waiting)
+    - Use case: Social media, non-critical (speed critical)
+- **Decision:** Based on data criticality
+  - Financial: Strong consistency (latency acceptable)
+  - Social: Eventual consistency (speed critical)
+
+### TCP Retransmission & Adaptive Timeouts ✅
+- **Problem:** Network packet loss (1% typical)
+  - Packet sent, lost in network
+  - Sender doesn't receive ACK (acknowledgment)
+  - How long to wait before assuming lost?
+- **TCP solution: Retransmit on timeout**
+  - Send packet
+  - Wait for ACK
+  - No ACK received (timeout) → Assume lost
+  - Retransmit packet
+  - Receive ACK → Continue
+- **RTO (Retransmission Timeout) calculation:**
+  - Monitor RTT (round-trip time) samples: [10ms, 12ms, 11ms, 50ms, ...]
+  - Calculate percentiles:
+    - p50 (median): 12ms
+    - p95: 45ms
+    - p99: 50ms
+  - Set timeout = p99 + buffer (e.g., 50ms + 10ms = 60ms)
+- **Why p99?**
+  - If timeout = p50: Too aggressive, unnecessary retransmits
+  - If timeout = p99: Only slowest 1% timeout unnecessarily
+  - Good balance: Catches real losses, few false alarms
+- **Adaptive:** RTO adjusts based on observed network latency
+  - Fast network: Short timeout
+  - Slow network: Long timeout
+
+### Congestion Control (AIMD) ✅
+- **Problem:** Apps send faster than network capacity
+  - Network capacity: 1000 packets/sec
+  - App sends 1500 packets/sec → 500 packets dropped
+- **TCP solution: AIMD (Additive Increase, Multiplicative Decrease)**
+  - No congestion: Increase rate slowly (additive +1 packet per round)
+    - 750 → 751 → 752 → ... (slow recovery)
+  - Congestion detected: Decrease rate aggressively (multiplicative / 2)
+    - 1500 → 750 (fast response to congestion)
+  - Asymmetry intentional: Fast reaction, slow recovery
+    - Why? Congestion is bad (respond immediately)
+    - Recovery is safe (can probe slowly)
+
+### Why Divide by 2 (not 1.5 or 1.1) ✅
+- **Simplicity:** Divide by 2 = bit shift in binary (fast kernel operation)
+- **Fairness:** Multiple apps competing on same network
+  - All divide by 2 → Proportional reduction
+  - Example: App A (1500) and App B (500) both / 2
+    - App A: 750, App B: 250 (fair, proportional)
+    - Divide by 1.5 would be unfair/unstable
+- **Mathematical:** Proven to converge fairly with AIMD
+- **Trade-off:**
+  - Divide by 2: Fast response, but might overshoot (too conservative)
+  - Divide by 1.5: Gentler, but slower to stop packet loss
+
+### Modern Congestion Control: BBR ✅
+- **Problem with AIMD:** Waits for packet loss (late detection)
+  - Packet loss = Congestion already happened
+  - Packets already dropped (wasted)
+- **Latency-based detection:**
+  - Latency increases BEFORE packet loss
+  - Queues build up at routers
+  - High latency = Early warning sign
+- **BBR (Google's algorithm):**
+  - Measures bottleneck bandwidth and RTT directly
+  - Detects rising latency → Reduces rate BEFORE packets drop
+  - Proactive: Avoids congestion before it happens
+  - Better for modern high-bandwidth networks
+- **Comparison:**
+  - AIMD (loss-based): Reactive, loses packets
+  - BBR (latency-based): Proactive, avoids loss
+  - Trade-off: AIMD simpler, BBR more sophisticated
+
+---
+
+## 🔍 DEEP DIVE: MONITORING & OBSERVABILITY (FINAL)
+
+**Coming next:** Deep dive into metrics, logging, tracing, and alerting for production systems.
+
+
+### Monitoring Frameworks: RED vs USE ✅
+- **RED Method (Request-driven systems like APIs):**
+  - **R**ate: How many requests per second?
+  - **E**rrors: How many failed?
+  - **D**uration: How long did they take (p50, p99)?
+  - Good for: Understanding user experience
+  - Example: "p99 latency = 500ms, 2% error rate, 1000 req/sec"
+
+- **USE Method (Resource-based systems like databases):**
+  - **U**tilization: How much CPU/memory/disk is used?
+  - **S**aturation: How full is the queue? How much waiting?
+  - **E**rrors: How many operations failed?
+  - Good for: Understanding bottlenecks and why system is slow
+  - Example: "CPU at 95%, queue depth = 1000, 0.1% errors"
+
+- **Best practice: Use BOTH frameworks**
+  - RED: User-facing metrics (what users experience)
+  - USE: Resource metrics (why system behaves that way)
+  - Together: Diagnose "app is slow"
+    - RED shows: "Yes, p99 = 500ms (confirmed)"
+    - USE shows: "CPU at 95% (root cause)"
+
+### Three Pillars of Observability ✅
+- **Metrics:** Numbers aggregated over time
+  - Examples: p50, p99 latency, error rate, CPU usage, request rate
+  - Useful for: Detecting problems, alerting
+  - Resolution: 1-minute or 5-minute buckets (aggregated)
+
+- **Logs:** Individual events with context
+  - Examples: "User 123 logged in", "Query took 500ms", errors/exceptions
+  - Useful for: Detailed debugging, understanding specific events
+  - Resolution: Per-event (fine-grained)
+
+- **Traces:** Request flow through distributed system
+  - Examples: Request → API (50ms) → Service A (100ms) → DB (300ms) → Response
+  - Useful for: Identifying which service is bottleneck
+  - Resolution: Per-request (complete path)
+
+- **Diagnostic flow:**
+  - Step 1: Metrics alert "p99 latency = 500ms" (WHAT is wrong)
+  - Step 2: Traces show "Database query = 300ms" (WHERE bottleneck)
+  - Step 3: Logs show "SELECT * FROM big_table took 300ms" (WHY slow)
+
+### Trace Sampling at Scale ✅
+- **Problem:** 100 million requests per day
+  - 1KB per trace = 100TB storage per day (too expensive)
+  - Can't store traces for all requests
+
+- **Threshold-based sampling:**
+  - Store traces only when latency > 500ms
+  - Store any errors
+  - Skip fast requests
+  - Problem: Threshold might be wrong
+    - Too high: Miss slow requests (below threshold)
+    - Too low: Store too many traces (expensive)
+
+- **Percentile-based sampling:** ✅ Better approach
+  - Sample 100% of p99 (slowest 1%)
+  - Sample 10% of p90-p99 range
+  - Sample 1% of p50-p90 range
+  - Sample 0% of p0-p50 range (fast requests)
+  - Benefits:
+    - Always capture slowest requests (high value)
+    - Statistically capture normal requests
+    - Never waste storage on fast requests
+    - Adaptive: As p99 changes, sampling adjusts
+
+- **Trade-off: Storage cost vs. diagnostic coverage**
+  - Sample 1% of all traces: Cheap, but might miss issues
+  - Sample 10% of all traces: Moderate cost, good coverage
+  - Sample 100% of all traces: Expensive, but complete visibility
+
+### Correlation IDs & Trace Propagation ✅
+- **Problem:** Request flows through 5 services
+  - API → Service A → Service B → Database → Service C
+  - Logs scattered across 5 different log files/services
+  - Hard to correlate which logs belong to same request
+
+- **Solution: UUID-based Trace/Correlation ID**
+  - Generate UUID when request arrives: "abc123def456-7890-xyz"
+  - Pass in HTTP headers: X-Trace-ID: abc123def456-7890-xyz
+  - Each service logs with it: "[abc123...] Processing request"
+  - Each service forwards to next: Includes same header
+  - Result: grep "abc123" logs/ shows all entries for ONE request
+
+- **Why not timestamp as ID?**
+  - Multiple requests at same millisecond
+  - Both would have same ID
+  - Logs mixed, correlation fails
+
+- **Propagation challenge: Manual propagation is error-prone**
+  - Developer in Service B might forget to pass header to Service C
+  - Connection to original request lost
+  - Hard to debug without trace
+
+- **Solution: Automatic middleware/library**
+  - Interceptor/middleware intercepts all requests
+  - Automatically checks for X-Trace-ID header
+  - If missing: Generate new UUID
+  - If present: Extract and propagate
+  - Automatically adds to ALL outgoing service calls
+  - Developers don't have to remember
+  - Tools: OpenTelemetry (supports all languages)
+
+---
+
+## 📊 FINAL SUMMARY
+
+**Total Deep Dives Completed:** 5
+1. ✅ Database Internals (ACID, WAL, locking, MVCC, transactions)
+2. ✅ Caching at Scale (stampede, coherence, multi-level, distributed)
+3. ✅ Message Queues (durability, ordering, idempotency)
+4. ✅ Networking (geographic distribution, TCP, congestion control)
+5. ✅ Monitoring & Observability (metrics, logs, traces, RED/USE, sampling)
+
+**Total Concepts Learned This Session:** 70+
+- Foundational concepts: 8 areas (load balancing, microservices, etc.)
+- Partial understanding: 6 areas (rate limiting, transactions, etc.)
+- New concepts: 50+ (circuit breaker, MVCC, Raft, BBR, etc.)
+
+**Real-World Scenarios Designed:** 2 Complete
+- Twitter (feed algorithm, search, notifications, media)
+- Uber (geospatial, matching, pricing, cancellations)
+- Netflix: In progress (video streaming)
+
+**Session Statistics:**
+- Learning approach: One question at a time, layer-by-layer
+- Background: Non-CS, strong logical thinking, first-principles learning
+- Feedback incorporated: Prefer open-ended questions, avoid MCQs with options
+- Learning style: Trade-off analysis, cost-benefit thinking, pragmatic decisions
+
+**Key Mental Models Developed:**
+1. All systems design is trade-offs (no perfect solution)
+2. Consistency is expensive (CAP theorem applies everywhere)
+3. Failure is inevitable (design for it, not around it)
+4. Denormalization at scale (accept duplication, avoid expensive joins)
+5. Asynchrony enables scalability (decouple services)
+6. Know your access patterns (optimize for actual usage)
+7. Observability wins (can't fix what you can't measure)
+
+---
+
+**When You Resume:**
+
+1. **Netflix Video Streaming Scenario** (capstone project)
+   - Video delivery at scale (5M concurrent viewers)
+   - Encoding and quality adaptation
+   - CDN strategy
+   - Buffering and playback optimization
+
+2. **Optional Deep Dives:**
+   - DNS and domain resolution
+   - Load balancing algorithms (consistent hashing details)
+   - BGP routing
+   - Event sourcing patterns
+   - Advanced consensus (Raft implementation details)
+
+3. **AWS Services Deep Dive** (noted but deferred)
+   - IAM, Secrets Manager
+   - RDS, DynamoDB, S3
+   - Lambda, SQS, SNS, Kafka
+   - CloudWatch, ELB, Auto Scaling
+
+**Knowledge Map is saved and ready for future reference!**
+
+---
+
+**Document Updated:** February 14, 2026 (Evening)
+**Total Learning Time This Session:** ~6 hours
+**Concepts Covered:** 70+
+**Next Session Recommendation:** Netflix scenario + optional deep dives
+
+**You've done excellent work! Take your break! 🎉**
+
