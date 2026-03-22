@@ -1,0 +1,1321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAP-C02 Flashcard Master</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Crimson+Text:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0a0e27;
+            --bg-secondary: #1a1f3a;
+            --bg-card: #242b4a;
+            --accent-primary: #00d9ff;
+            --accent-secondary: #ff006e;
+            --text-primary: #e8f4f8;
+            --text-secondary: #8fa3b0;
+            --success: #00ff88;
+            --warning: #ffd60a;
+            --border: #3a4563;
+        }
+
+        body {
+            font-family: 'Crimson Text', serif;
+            background: linear-gradient(135deg, var(--bg-primary) 0%, #0f1535 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Animated background particles */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                radial-gradient(circle at 20% 50%, rgba(0, 217, 255, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(255, 0, 110, 0.1) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 50px;
+            padding: 30px;
+            background: linear-gradient(135deg, var(--bg-secondary), var(--bg-card));
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            font-size: 3em;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+            font-family: 'Space Mono', monospace;
+            letter-spacing: -2px;
+        }
+
+        .subtitle {
+            font-size: 1.2em;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            padding: 25px;
+            border-radius: 15px;
+            border: 1px solid var(--border);
+            text-align: center;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 217, 255, 0.2);
+        }
+
+        .stat-label {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.9em;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
+
+        .stat-value {
+            font-size: 2.5em;
+            font-weight: 700;
+            color: var(--accent-primary);
+        }
+
+        .flashcard-container {
+            perspective: 1000px;
+            margin-bottom: 40px;
+        }
+
+        .flashcard {
+            width: 100%;
+            min-height: 400px;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.6s cubic-bezier(0.4, 0.0, 0.2, 1);
+            cursor: pointer;
+        }
+
+        .flashcard.flipped {
+            transform: rotateY(180deg);
+        }
+
+        .card-face {
+            position: absolute;
+            width: 100%;
+            min-height: 400px;
+            backface-visibility: hidden;
+            background: linear-gradient(135deg, var(--bg-card), var(--bg-secondary));
+            border-radius: 20px;
+            border: 2px solid var(--border);
+            padding: 50px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+        }
+
+        .card-front {
+            background: linear-gradient(135deg, #1a1f3a, #242b4a);
+        }
+
+        .card-back {
+            background: linear-gradient(135deg, #0f3a3a, #1a4a4a);
+            transform: rotateY(180deg);
+        }
+
+        .card-label {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.8em;
+            color: var(--accent-primary);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 30px;
+            padding: 8px 20px;
+            background: rgba(0, 217, 255, 0.1);
+            border-radius: 20px;
+            border: 1px solid var(--accent-primary);
+        }
+
+        .card-content {
+            font-size: 1.8em;
+            line-height: 1.6;
+            text-align: center;
+            color: var(--text-primary);
+            max-width: 600px;
+        }
+
+        .card-back .card-label {
+            color: var(--success);
+            background: rgba(0, 255, 136, 0.1);
+            border-color: var(--success);
+        }
+
+        .card-term {
+            font-family: 'Space Mono', monospace;
+            font-size: 2.2em;
+            font-weight: 700;
+            color: var(--success);
+            margin-bottom: 20px;
+        }
+
+        .card-details {
+            font-size: 1.1em;
+            line-height: 1.8;
+            color: var(--text-secondary);
+            margin-top: 20px;
+            text-align: left;
+        }
+
+        .controls {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 40px;
+        }
+
+        button {
+            font-family: 'Space Mono', monospace;
+            padding: 15px 40px;
+            font-size: 1em;
+            border: 2px solid;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        button:hover::before {
+            left: 100%;
+        }
+
+        .btn-wrong {
+            background: transparent;
+            color: var(--accent-secondary);
+            border-color: var(--accent-secondary);
+        }
+
+        .btn-wrong:hover {
+            background: var(--accent-secondary);
+            color: var(--bg-primary);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(255, 0, 110, 0.4);
+        }
+
+        .btn-correct {
+            background: transparent;
+            color: var(--success);
+            border-color: var(--success);
+        }
+
+        .btn-correct:hover {
+            background: var(--success);
+            color: var(--bg-primary);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0, 255, 136, 0.4);
+        }
+
+        .btn-flip {
+            background: var(--accent-primary);
+            color: var(--bg-primary);
+            border-color: var(--accent-primary);
+        }
+
+        .btn-flip:hover {
+            background: transparent;
+            color: var(--accent-primary);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0, 217, 255, 0.4);
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: var(--bg-secondary);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 40px;
+            border: 1px solid var(--border);
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-primary), var(--success));
+            transition: width 0.5s ease;
+            box-shadow: 0 0 20px rgba(0, 217, 255, 0.5);
+        }
+
+        .category-badge {
+            display: inline-block;
+            padding: 5px 15px;
+            background: rgba(0, 217, 255, 0.1);
+            border: 1px solid var(--accent-primary);
+            border-radius: 20px;
+            font-family: 'Space Mono', monospace;
+            font-size: 0.8em;
+            color: var(--accent-primary);
+            margin-bottom: 20px;
+        }
+
+        .difficulty-indicator {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 5px;
+        }
+
+        .difficulty-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--border);
+        }
+
+        .difficulty-dot.active {
+            background: var(--accent-secondary);
+            box-shadow: 0 0 10px var(--accent-secondary);
+        }
+
+        .export-section {
+            text-align: center;
+            margin-top: 50px;
+            padding: 30px;
+            background: var(--bg-card);
+            border-radius: 15px;
+            border: 1px solid var(--border);
+        }
+
+        .btn-export {
+            background: linear-gradient(135deg, var(--accent-primary), var(--success));
+            color: var(--bg-primary);
+            border: none;
+            padding: 15px 40px;
+            margin: 10px;
+        }
+
+        .btn-export:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 40px rgba(0, 217, 255, 0.4);
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .flashcard-container {
+            animation: slideIn 0.6s ease;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2em;
+            }
+
+            .card-content {
+                font-size: 1.4em;
+            }
+
+            .controls {
+                flex-direction: column;
+            }
+
+            button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>⚡ SAP-C02 Flashcard Master</h1>
+            <p class="subtitle">Intelligent Spaced Repetition Learning</p>
+        </header>
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-label">Cards Studied</div>
+                <div class="stat-value" id="cardsStudied">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Accuracy</div>
+                <div class="stat-value" id="accuracy">--%</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Mastered</div>
+                <div class="stat-value" id="mastered">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Total Cards</div>
+                <div class="stat-value" id="totalCards">0</div>
+            </div>
+        </div>
+
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+
+        <div class="flashcard-container">
+            <div class="flashcard" id="flashcard">
+                <div class="card-face card-front">
+                    <div class="difficulty-indicator" id="difficultyFront"></div>
+                    <div class="category-badge" id="categoryBadge">Loading...</div>
+                    <div class="card-label">Question</div>
+                    <div class="card-content" id="cardFront">Loading flashcards...</div>
+                </div>
+                <div class="card-face card-back">
+                    <div class="difficulty-indicator" id="difficultyBack"></div>
+                    <div class="card-label">AWS Term</div>
+                    <div class="card-term" id="cardTerm">-</div>
+                    <div class="card-details" id="cardDetails">-</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="btn-flip" id="flipBtn" onclick="flipCard()">
+                💡 Show Answer
+            </button>
+        </div>
+
+        <div class="controls" id="answerControls" style="display: none;">
+            <button class="btn-wrong" onclick="markCard(false)">
+                ❌ Wrong - Review Again
+            </button>
+            <button class="btn-correct" onclick="markCard(true)">
+                ✅ Correct - Got It!
+            </button>
+        </div>
+
+        <div class="export-section">
+            <h3 style="margin-bottom: 20px; font-family: 'Space Mono', monospace;">📊 Export Your Progress</h3>
+            <button class="btn-export" onclick="exportProgress()">
+                💾 Download Progress (JSON)
+            </button>
+            <button class="btn-export" onclick="resetProgress()">
+                🔄 Reset All Progress
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Complete flashcard database with all 50+ cards
+        const flashcards = [
+            // COMPUTE SERVICES
+            {
+                category: "Compute",
+                front: "Pay beforehand for a discount to guarantee you'll use the instance",
+                term: "Reserved Instances (RI)",
+                details: "• Commit to 1 or 3 years\n• Up to 72% savings vs On-Demand\n• Types: Standard (can't change), Convertible (can change)\n• Payment: All upfront, partial, or no upfront"
+            },
+            {
+                category: "Compute",
+                front: "Pay only when the instance is running, no commitment",
+                term: "On-Demand Instances",
+                details: "• Pay by the second (min 60s)\n• No long-term commitment\n• Most expensive option\n• Use for: Unpredictable workloads, testing"
+            },
+            {
+                category: "Compute",
+                front: "Use spare AWS capacity for up to 90% discount, can be interrupted",
+                term: "Spot Instances",
+                details: "• Bid on unused EC2 capacity\n• Up to 90% savings vs On-Demand\n• AWS can terminate with 2-min warning\n• Use for: Batch jobs, fault-tolerant workloads"
+            },
+            {
+                category: "Compute",
+                front: "Flexible pricing where you commit to $/hour instead of specific instance",
+                term: "Savings Plans",
+                details: "• Commit to $/hour for 1-3 years\n• Up to 72% savings\n• More flexible than RIs\n• Types: Compute, EC2, SageMaker"
+            },
+            {
+                category: "Compute",
+                front: "Lambda pricing formula: memory × time",
+                term: "GB-seconds",
+                details: "• Formula: Memory (GB) × Duration (sec)\n• Example: 1 GB × 30 sec = 30 GB-sec\n• More memory = more CPU\n• Use Lambda Power Tuning to optimize"
+            },
+            {
+                category: "Compute",
+                front: "Keep Lambda warm to avoid cold starts",
+                term: "Provisioned Concurrency",
+                details: "• Keeps functions initialized\n• Eliminates cold start latency\n• Pay for provisioned capacity when idle\n• Use for: Latency-sensitive apps"
+            },
+
+            // NETWORKING SERVICES
+            {
+                category: "Networking",
+                front: "Allows resources in VPC to access internet directly (two-way)",
+                term: "Internet Gateway (IGW)",
+                details: "• Enables internet access for VPC\n• Bidirectional traffic\n• One per VPC, free\n• Add route: 0.0.0.0/0 → IGW"
+            },
+            {
+                category: "Networking",
+                front: "Proxy server that converts private IP to public for outbound only",
+                term: "NAT Gateway",
+                details: "• Network Address Translation\n• Outbound-only (stateful)\n• Must be in public subnet\n• ~$0.045/hour + data transfer\n• Managed by AWS"
+            },
+            {
+                category: "Networking",
+                front: "Old way to do NAT using EC2 instance",
+                term: "NAT Instance",
+                details: "• EC2 configured for NAT\n• You manage it\n• Legacy (use NAT Gateway)\n• Cheaper for very low traffic\n• Single point of failure"
+            },
+            {
+                category: "Networking",
+                front: "What makes a subnet 'public' vs 'private'?",
+                term: "Route Table Configuration",
+                details: "• Public: 0.0.0.0/0 → Internet Gateway\n• Private: 0.0.0.0/0 → NAT Gateway\n• Route table determines accessibility\n• Public also needs public IP"
+            },
+            {
+                category: "Networking",
+                front: "DNS service for routing with health checks",
+                term: "Route 53",
+                details: "• AWS DNS service\n• Routing: Simple, Weighted, Latency, Failover\n• Health checks for failover\n• $0.50/zone/month"
+            },
+            {
+                category: "Networking",
+                front: "Gradual traffic shifting like AB testing",
+                term: "Route 53 Weighted Routing",
+                details: "• Distribute traffic by weights (0-255)\n• Example: 90% new, 10% old (canary)\n• Use for: A/B testing, gradual migration"
+            },
+            {
+                category: "Networking",
+                front: "Automatic DNS failover to secondary region",
+                term: "Route 53 Failover Routing",
+                details: "• Primary and secondary resources\n• Health checks on primary\n• Auto failover if primary fails\n• Use for: Active-passive DR"
+            },
+
+            // STORAGE SERVICES
+            {
+                category: "Storage",
+                front: "S3 tier for frequent access (most expensive)",
+                term: "S3 Standard",
+                details: "• $0.023/GB/month\n• Millisecond latency\n• 99.99% availability\n• 11 9's durability\n• Use for: Active data"
+            },
+            {
+                category: "Storage",
+                front: "S3 tier for data accessed monthly, cheaper",
+                term: "S3 Standard-IA",
+                details: "• $0.0125/GB (~45% cheaper)\n• Millisecond latency\n• Min 30-day storage\n• Retrieval fee: $0.01/GB\n• Use for: Backups, DR"
+            },
+            {
+                category: "Storage",
+                front: "S3 archive tier with instant access (no delay)",
+                term: "S3 Glacier Instant Retrieval",
+                details: "• $0.004/GB (~68% cheaper)\n• Millisecond latency!\n• Min 90-day storage\n• Retrieval fee: $0.03/GB\n• Use for: Rarely accessed, must be instant"
+            },
+            {
+                category: "Storage",
+                front: "S3 archive tier with minutes-to-hours retrieval",
+                term: "S3 Glacier Flexible Retrieval",
+                details: "• $0.0036/GB (~84% cheaper)\n• 1-5 min to 12 hours retrieval\n• Min 90-day storage\n• Use for: Long-term backups"
+            },
+            {
+                category: "Storage",
+                front: "S3 cheapest tier, 12-48 hour retrieval",
+                term: "S3 Glacier Deep Archive",
+                details: "• $0.00099/GB (~96% cheaper)\n• 12-48 hour retrieval\n• Min 180-day storage\n• Use for: Compliance archives"
+            },
+            {
+                category: "Storage",
+                front: "Automatically transition S3 objects between storage classes",
+                term: "S3 Lifecycle Policies",
+                details: "• Rules for object lifecycle\n• Actions: Transition, Expiration\n• Based on: Age, prefix, tags\n• Example: Standard→IA→Glacier"
+            },
+            {
+                category: "Storage",
+                front: "Replicate S3 objects to another bucket/region",
+                term: "S3 Cross-Region Replication (CRR)",
+                details: "• Automatic async copying\n• Requires versioning\n• Use for: DR, compliance\n• Only NEW objects (unless Batch)"
+            },
+            {
+                category: "Storage",
+                front: "Block all public access to S3 bucket",
+                term: "S3 Block Public Access",
+                details: "• 4 settings to prevent public access\n• Account or bucket level\n• Overrides policies and ACLs\n• Best practice: Enable by default"
+            },
+            {
+                category: "Storage",
+                front: "Cache S3 content at edge locations globally",
+                term: "CloudFront",
+                details: "• CDN with 400+ edge locations\n• Reduces latency globally\n• Cache: S3, API Gateway, custom\n• Supports video streaming"
+            },
+            {
+                category: "Storage",
+                front: "HTTP header that controls CloudFront cache duration",
+                term: "Cache-Control Header",
+                details: "• max-age=3600 (1 hour)\n• public, max-age=600 (10 min)\n• no-cache (always validate)\n• Controls edge TTL"
+            },
+            {
+                category: "Storage",
+                front: "CloudFront identity to access private S3 bucket",
+                term: "Origin Access Control (OAC)",
+                details: "• Special CloudFront identity\n• S3 bucket grants access to OAC\n• S3 stays private\n• OAC replaces legacy OAI"
+            },
+
+            // DATABASE SERVICES
+            {
+                category: "Database",
+                front: "NoSQL database, flexible schema, auto-scales",
+                term: "DynamoDB",
+                details: "• Key-value/document NoSQL\n• Millisecond latency\n• No schema required\n• Use for: Mobile, gaming, IoT"
+            },
+            {
+                category: "Database",
+                front: "DynamoDB pricing where you pay per read/write",
+                term: "DynamoDB On-Demand Mode",
+                details: "• Pay per request\n• No capacity planning\n• Auto scales\n• Use for: Unpredictable traffic"
+            },
+            {
+                category: "Database",
+                front: "DynamoDB pricing where you reserve capacity",
+                term: "DynamoDB Provisioned Mode",
+                details: "• Specify RCUs/WCUs\n• Cheaper per request\n• Can use Auto Scaling\n• Use for: Predictable traffic"
+            },
+            {
+                category: "Database",
+                front: "DynamoDB cache for microsecond latency",
+                term: "DAX (DynamoDB Accelerator)",
+                details: "• In-memory cache\n• Microsecond latency\n• Fully managed\n• Compatible with DynamoDB API"
+            },
+            {
+                category: "Database",
+                front: "Managed relational database service",
+                term: "RDS (Relational Database Service)",
+                details: "• Managed SQL databases\n• MySQL, PostgreSQL, Oracle, SQL Server\n• AWS handles: Patching, backups\n• Multi-AZ for HA"
+            },
+            {
+                category: "Database",
+                front: "RDS automatic failover to standby in another AZ",
+                term: "RDS Multi-AZ",
+                details: "• Synchronous replication\n• Auto failover (~60 sec)\n• Single endpoint (DNS switch)\n• 99.95% availability"
+            },
+            {
+                category: "Database",
+                front: "RDS copy for offloading read traffic",
+                term: "RDS Read Replica",
+                details: "• Asynchronous replication\n• Up to 15 replicas\n• Each has own endpoint\n• Use for: Read scaling, analytics"
+            },
+            {
+                category: "Database",
+                front: "MySQL/PostgreSQL compatible with better performance",
+                term: "Aurora",
+                details: "• 5x MySQL, 3x PostgreSQL speed\n• Auto-scales 10GB to 128TB\n• Up to 15 Read Replicas\n• Multi-AZ by default (6 copies)"
+            },
+            {
+                category: "Database",
+                front: "Aurora that auto-scales compute based on load",
+                term: "Aurora Serverless",
+                details: "• Auto-scales ACUs\n• Can pause when idle\n• Use for: Unpredictable workloads\n• v2 recommended"
+            },
+            {
+                category: "Database",
+                front: "Aurora with primary in one region, replicas in others",
+                term: "Aurora Global Database",
+                details: "• Up to 5 secondary regions\n• Sub-second replication\n• Promote in <1 min\n• Use for: Global apps, DR"
+            },
+
+            // SECURITY & IDENTITY
+            {
+                category: "Security",
+                front: "AWS identity that services can assume (no passwords)",
+                term: "IAM Role",
+                details: "• Identity with permissions\n• No long-term credentials\n• Temporary tokens (auto-rotated)\n• Use for: AWS-to-AWS access"
+            },
+            {
+                category: "Security",
+                front: "Document that defines allowed/denied actions",
+                term: "IAM Policy",
+                details: "• JSON with permissions\n• Effect, Action, Resource, Condition\n• Types: Managed, Inline\n• Deny > Allow > Implicit deny"
+            },
+            {
+                category: "Security",
+                front: "Store API keys, passwords securely with rotation",
+                term: "AWS Secrets Manager",
+                details: "• Encrypted secret storage\n• Automatic rotation\n• Integration with RDS\n• $0.40/secret/month"
+            },
+            {
+                category: "Security",
+                front: "Store config values and simple secrets (cheaper)",
+                term: "Systems Manager Parameter Store",
+                details: "• Config data, secrets\n• Free tier: 10,000 params\n• SecureString with KMS\n• No auto rotation"
+            },
+            {
+                category: "Security",
+                front: "Encryption key management service",
+                term: "KMS (Key Management Service)",
+                details: "• Create and manage keys\n• AWS managed (free) or Customer ($1/mo)\n• Auto rotation yearly\n• Audit with CloudTrail"
+            },
+
+            // MIGRATION & DR
+            {
+                category: "Migration",
+                front: "Move database with minimal downtime via replication",
+                term: "DMS (Database Migration Service)",
+                details: "• Migrate to/from AWS\n• Homogeneous or Heterogeneous\n• Full load + CDC for minimal downtime\n• Use SCT for schema conversion"
+            },
+            {
+                category: "Migration",
+                front: "6 ways to migrate applications to cloud",
+                term: "6 R's of Migration",
+                details: "1. Rehost (Lift-shift)\n2. Replatform (Lift-tinker)\n3. Repurchase (SaaS)\n4. Refactor (Redesign)\n5. Retire\n6. Retain"
+            },
+            {
+                category: "Migration",
+                front: "How long to recover after disaster",
+                term: "RTO (Recovery Time Objective)",
+                details: "• Time from disaster to recovery\n• Example: 4 hours\n• Lower RTO = More expensive\n• Measured in: min, hours, days"
+            },
+            {
+                category: "Migration",
+                front: "How much data you can afford to lose",
+                term: "RPO (Recovery Point Objective)",
+                details: "• Maximum data loss\n• Example: 1 hour of data\n• Lower RPO = More expensive\n• Measured in: min, hours, days"
+            },
+            {
+                category: "Migration",
+                front: "One region active, other on standby",
+                term: "Active-Passive Architecture",
+                details: "• Primary handles all traffic\n• Secondary is standby\n• Failover when primary fails\n• Strong consistency\n• Example: Multi-AZ RDS"
+            },
+            {
+                category: "Migration",
+                front: "Both regions active simultaneously",
+                term: "Active-Active Architecture",
+                details: "• Multiple regions serve traffic\n• Route 53 distributes load\n• 99.99%+ availability\n• Need conflict resolution\n• Example: DynamoDB Global Tables"
+            },
+
+            // MONITORING & COST
+            {
+                category: "Monitoring",
+                front: "AWS service for metrics and logs",
+                term: "CloudWatch",
+                details: "• Collect metrics and logs\n• Set alarms and actions\n• Standard metrics free\n• Custom metrics paid\n• 15-month retention"
+            },
+            {
+                category: "Monitoring",
+                front: "Track all API calls and changes",
+                term: "CloudTrail",
+                details: "• Records all API calls\n• Who, what, when\n• Use for: Auditing, compliance\n• Delivers logs to S3"
+            },
+            {
+                category: "Monitoring",
+                front: "Set spending limits and alerts",
+                term: "AWS Budgets",
+                details: "• Custom cost/usage budgets\n• Email/SNS alerts\n• Can trigger actions\n• First 2 free, $0.02/day after"
+            },
+            {
+                category: "Monitoring",
+                front: "Queue for messages that failed processing",
+                term: "Dead Letter Queue (DLQ)",
+                details: "• SQS for failed messages\n• After max receive count\n• Use for: Debugging, no loss\n• Separate from main queue"
+            },
+
+            // Additional cards to reach 50+
+            {
+                category: "Compute",
+                front: "Container orchestration service using Docker",
+                term: "ECS (Elastic Container Service)",
+                details: "• Run containers on AWS\n• Launch types: EC2, Fargate\n• Task definitions\n• Integrates with ALB/NLB"
+            },
+            {
+                category: "Compute",
+                front: "Managed Kubernetes service",
+                term: "EKS (Elastic Kubernetes Service)",
+                details: "• Kubernetes on AWS\n• Managed control plane\n• Node types: Managed, Fargate\n• IRSA for pod permissions"
+            },
+            {
+                category: "Compute",
+                front: "Serverless container compute",
+                term: "AWS Fargate",
+                details: "• No server management\n• Pay for vCPU/memory used\n• Works with ECS and EKS\n• Use for: Serverless containers"
+            },
+            {
+                category: "Networking",
+                front: "Distribute traffic across multiple targets",
+                term: "Application Load Balancer (ALB)",
+                details: "• Layer 7 (HTTP/HTTPS)\n• Path-based routing\n• Host-based routing\n• WebSocket support"
+            },
+            {
+                category: "Networking",
+                front: "High-performance TCP/UDP load balancing",
+                term: "Network Load Balancer (NLB)",
+                details: "• Layer 4 (TCP/UDP)\n• Millions of requests/sec\n• Ultra-low latency\n• Static IP support"
+            },
+            {
+                category: "Storage",
+                front: "Shared file system for EC2 instances",
+                term: "EFS (Elastic File System)",
+                details: "• NFS file system\n• Multi-AZ by default\n• Auto-scales (pay for use)\n• Use for: Shared storage"
+            },
+
+            // SECURITY PRINCIPLES
+            {
+                category: "Security Principles",
+                front: "Provide only minimum access necessary for a task",
+                term: "Principle of Least Privilege",
+                details: "• Grant minimum permissions needed\n• Don't give full Prod access when only DB needed\n• Revoke when no longer needed\n• Applies to: IAM policies, Security Groups, Network ACLs"
+            },
+            {
+                category: "Security Principles",
+                front: "Multiple layers of security, not just one",
+                term: "Defense in Depth",
+                details: "• Layer 1: Network (Private subnet)\n• Layer 2: Firewall (Security Groups)\n• Layer 3: Authentication\n• Layer 4: Encryption\n• Layer 5: Monitoring\n• If one layer fails, others protect"
+            },
+            {
+                category: "Security Principles",
+                front: "Limit damage if security incident occurs",
+                term: "Blast Radius Minimization",
+                details: "• Isolate environments (Prod vs Dev)\n• Limit scope of access\n• Use separate AWS accounts\n• Contain damage to small area"
+            },
+            {
+                category: "Security Principles",
+                front: "Never trust, always verify access",
+                term: "Zero Trust Security",
+                details: "• Don't trust based on network location\n• Verify every request\n• Assume breach has occurred\n• Continuous validation"
+            },
+            {
+                category: "Security Principles",
+                front: "Create anonymized copy of production data for testing",
+                term: "Data Masking / Sandbox Environment",
+                details: "• Snapshot Prod → Restore to Dev\n• Anonymize PII (names, emails, cards)\n• Realistic data without risk\n• Compliance: GDPR, HIPAA, PCI-DSS"
+            },
+
+            // VPC FUNDAMENTALS
+            {
+                category: "VPC",
+                front: "Your isolated private network inside AWS",
+                term: "VPC (Virtual Private Cloud)",
+                details: "• Your private network in AWS\n• Isolated from other customers\n• Define IP range (CIDR block)\n• Control internet access\n• Example: 10.0.0.0/16"
+            },
+            {
+                category: "VPC",
+                front: "Subdivision of VPC for organizing resources",
+                term: "Subnet",
+                details: "• Portion of VPC IP range\n• Exists in single AZ\n• Types: Public (internet-facing), Private (hidden)\n• Example: 10.0.1.0/24"
+            },
+            {
+                category: "VPC",
+                front: "Subnet where resources have NO public IP, hidden from internet",
+                term: "Private Subnet",
+                details: "• No public IP addresses\n• Can't be reached from internet\n• Route to NAT Gateway for outbound\n• Use for: Databases, app servers"
+            },
+            {
+                category: "VPC",
+                front: "Subnet where resources CAN have public IPs (if allowed)",
+                term: "Public Subnet",
+                details: "• Resources can have public IPs\n• Route to Internet Gateway\n• Can be internet-accessible\n• Use for: Web servers, load balancers"
+            },
+            {
+                category: "VPC",
+                front: "Rules that direct network traffic where to go",
+                term: "Route Table",
+                details: "• Controls traffic routing\n• Each subnet has one\n• Entries: Destination → Target\n• Example: 0.0.0.0/0 → Internet Gateway"
+            },
+            {
+                category: "VPC",
+                front: "IP address range notation (e.g., 10.0.0.0/16)",
+                term: "CIDR Block",
+                details: "• Classless Inter-Domain Routing\n• /16 = 65,536 IPs\n• /24 = 256 IPs\n• /32 = 1 IP (single host)"
+            },
+
+            // VPC CONNECTIVITY
+            {
+                category: "VPC",
+                front: "Direct private connection between two VPCs",
+                term: "VPC Peering",
+                details: "• One-to-one connection\n• NOT transitive (can't route through)\n• Same/different regions\n• N VPCs = N×(N-1)/2 connections\n• Use for: 2-3 VPCs only"
+            },
+            {
+                category: "VPC",
+                front: "Central hub connecting many VPCs with routing control",
+                term: "Transit Gateway",
+                details: "• Hub-and-spoke model\n• One connection per VPC\n• Route tables control connectivity\n• Cross-account support\n• On-premises connectivity\n• Use for: 10+ VPCs"
+            },
+            {
+                category: "VPC",
+                front: "Dedicated network connection from office to AWS",
+                term: "Direct Connect",
+                details: "• Private connection (not internet)\n• 1 Gbps or 10 Gbps\n• Consistent network performance\n• Lower latency than VPN\n• Use for: Hybrid cloud, large data transfer"
+            },
+            {
+                category: "VPC",
+                front: "Encrypted tunnel over internet to connect to VPC",
+                term: "Site-to-Site VPN",
+                details: "• IPsec VPN connection\n• Over public internet\n• Quick to set up\n• Lower cost than Direct Connect\n• Use for: Backup, temporary, small offices"
+            },
+
+            // SECURITY GROUPS & NACLs
+            {
+                category: "Security",
+                front: "Stateful firewall at instance level",
+                term: "Security Group",
+                details: "• Instance-level firewall\n• Stateful (return traffic auto-allowed)\n• Allow rules only (no deny)\n• Default: Deny all inbound, allow all outbound"
+            },
+            {
+                category: "Security",
+                front: "Stateless firewall at subnet level",
+                term: "Network ACL (NACL)",
+                details: "• Subnet-level firewall\n• Stateless (must allow return traffic)\n• Allow AND deny rules\n• Rules processed in order\n• Default: Allow all traffic"
+            },
+            {
+                category: "Security",
+                front: "Firewall that remembers connections (return traffic auto-allowed)",
+                term: "Stateful Firewall",
+                details: "• Tracks connection state\n• Allows return traffic automatically\n• Example: Security Groups\n• Easier to configure"
+            },
+            {
+                category: "Security",
+                front: "Firewall that doesn't remember connections (must allow both directions)",
+                term: "Stateless Firewall",
+                details: "• No connection tracking\n• Must explicitly allow return traffic\n• Example: Network ACLs\n• More complex configuration"
+            },
+
+            // ADVANCED NETWORKING
+            {
+                category: "Networking",
+                front: "AWS service for private connectivity to other AWS services",
+                term: "VPC Endpoint",
+                details: "• Private connection to AWS services\n• Traffic doesn't go over internet\n• Types: Gateway (S3, DynamoDB), Interface (all others)\n• No NAT Gateway/IGW needed"
+            },
+            {
+                category: "Networking",
+                front: "Share resources across AWS accounts securely",
+                term: "AWS Resource Access Manager (RAM)",
+                details: "• Share VPCs, subnets, Transit Gateway\n• Cross-account resource sharing\n• No need to duplicate resources\n• Centralized management"
+            },
+            {
+                category: "Networking",
+                front: "Private connection from VPC to supported AWS services",
+                term: "AWS PrivateLink",
+                details: "• Access services privately\n• No internet, NAT, IGW needed\n• Traffic stays on AWS network\n• Use for: VPC-to-VPC services, SaaS"
+            },
+            {
+                category: "Networking",
+                front: "Distribute incoming traffic across multiple targets",
+                term: "Elastic Load Balancer (ELB)",
+                details: "• Types: ALB (Layer 7), NLB (Layer 4), GLB (Layer 3)\n• Auto-scales\n• Health checks\n• Multi-AZ by default"
+            },
+
+            // DATA PROTECTION
+            {
+                category: "Security",
+                front: "Protect data when it's stored on disk",
+                term: "Encryption at Rest",
+                details: "• Data encrypted on storage\n• Examples: EBS, S3, RDS\n• Uses: KMS, AES-256\n• Protects if physical storage stolen"
+            },
+            {
+                category: "Security",
+                front: "Protect data while moving over network",
+                term: "Encryption in Transit",
+                details: "• Data encrypted during transmission\n• Uses: TLS/SSL, HTTPS\n• Protects from network sniffing\n• Example: HTTPS for web traffic"
+            },
+            {
+                category: "Security",
+                front: "Encrypt data before sending to AWS",
+                term: "Client-Side Encryption",
+                details: "• You encrypt before upload\n• AWS never sees unencrypted data\n• You manage keys\n• Maximum security/control"
+            },
+            {
+                category: "Security",
+                front: "AWS encrypts data on server side",
+                term: "Server-Side Encryption",
+                details: "• AWS encrypts after receiving data\n• Options: SSE-S3, SSE-KMS, SSE-C\n• Easier than client-side\n• Still secure"
+            },
+
+            // COMPLIANCE & GOVERNANCE
+            {
+                category: "Compliance",
+                front: "Hierarchical organization of multiple AWS accounts",
+                term: "AWS Organizations",
+                details: "• Centrally manage multiple accounts\n• Consolidated billing\n• Service Control Policies (SCPs)\n• Organize with OUs\n• Cross-account resource sharing"
+            },
+            {
+                category: "Compliance",
+                front: "Policies that control what services accounts can use",
+                term: "Service Control Policies (SCPs)",
+                details: "• Applied to AWS Organizations\n• Restrict service usage\n• Example: Block production from using EC2 Spot\n• Inheritance through OU tree\n• Maximum permission boundary"
+            },
+            {
+                category: "Compliance",
+                front: "Automated landing zone for multi-account setup",
+                term: "AWS Control Tower",
+                details: "• Automated multi-account setup\n• Pre-configured guardrails\n• Account Factory for new accounts\n• Centralized logging\n• Built on Organizations + Config + CloudTrail"
+            },
+            {
+                category: "Compliance",
+                front: "Continuously assess AWS resource configurations",
+                term: "AWS Config",
+                details: "• Track resource configurations\n• Configuration history\n• Compliance rules\n• Automated remediation\n• Aggregators for multi-account"
+            },
+            {
+                category: "Compliance",
+                front: "Intelligent threat detection service",
+                term: "AWS GuardDuty",
+                details: "• Machine learning threat detection\n• Monitors: CloudTrail, VPC Flow Logs, DNS logs\n• Detects: Compromised instances, reconnaissance\n• Automated findings\n• No infrastructure to manage"
+            },
+
+            // MONITORING & LOGGING
+            {
+                category: "Monitoring",
+                front: "Network traffic logs for VPC",
+                term: "VPC Flow Logs",
+                details: "• Capture IP traffic info\n• Source/destination IPs, ports\n• Accepted/rejected traffic\n• Troubleshooting, security analysis\n• Can send to CloudWatch or S3"
+            },
+            {
+                category: "Monitoring",
+                front: "Distributed tracing for microservices",
+                term: "AWS X-Ray",
+                details: "• Trace requests through services\n• Find bottlenecks\n• Service map visualization\n• Latency analysis\n• Use for: Debugging microservices"
+            },
+            {
+                category: "Monitoring",
+                front: "Centralized security findings dashboard",
+                term: "AWS Security Hub",
+                details: "• Aggregates security findings\n• From: GuardDuty, Inspector, Macie, Config\n• Compliance checks (CIS, PCI-DSS)\n• Automated remediation\n• Multi-account support"
+            },
+
+            // INCIDENT RESPONSE
+            {
+                category: "Security",
+                front: "Isolate compromised instance for investigation",
+                term: "Instance Isolation",
+                details: "• Change Security Group to deny all\n• Or move to isolated subnet\n• Snapshot EBS for forensics\n• Tag as 'compromised'\n• Don't terminate (lose evidence)"
+            },
+            {
+                category: "Security",
+                front: "Take snapshot of system for security analysis",
+                term: "Forensic Analysis",
+                details: "• EBS snapshot of compromised instance\n• Memory dump if available\n• CloudTrail logs\n• VPC Flow Logs\n• Analyze in isolated environment"
+            },
+
+            // DISASTER RECOVERY
+            {
+                category: "DR",
+                front: "Minimal infrastructure, restore from backups",
+                term: "Backup and Restore (DR Strategy)",
+                details: "• Slowest recovery (hours to days)\n• Lowest cost\n• RTO: Hours to days\n• RPO: Hours (depends on backup frequency)\n• Use for: Non-critical systems"
+            },
+            {
+                category: "DR",
+                front: "Minimal resources running, scale up when needed",
+                term: "Pilot Light (DR Strategy)",
+                details: "• Core services running (database replication)\n• Other services off\n• RTO: 10 minutes to hours\n• RPO: Minutes (continuous replication)\n• Medium cost"
+            },
+            {
+                category: "DR",
+                front: "Scaled-down version always running",
+                term: "Warm Standby (DR Strategy)",
+                details: "• Full environment but smaller instances\n• Scale up during disaster\n• RTO: Minutes\n• RPO: Seconds to minutes\n• Higher cost than Pilot Light"
+            },
+            {
+                category: "DR",
+                front: "Full duplicate environment always running",
+                term: "Multi-Site / Active-Active (DR Strategy)",
+                details: "• Highest availability (99.99%+)\n• Both sites serve traffic\n• RTO: Seconds to minutes\n• RPO: Real-time (no data loss)\n• Highest cost (2x infrastructure)"
+            }
+        ];
+
+        // Spaced repetition algorithm
+        class SpacedRepetition {
+            constructor() {
+                this.loadProgress();
+            }
+
+            loadProgress() {
+                const saved = localStorage.getItem('flashcardProgress');
+                if (saved) {
+                    this.progress = JSON.parse(saved);
+                } else {
+                    this.progress = {};
+                    flashcards.forEach((card, index) => {
+                        this.progress[index] = {
+                            correct: 0,
+                            wrong: 0,
+                            lastReview: null,
+                            difficulty: 1, // 1-5, higher = needs more review
+                            nextReview: Date.now()
+                        };
+                    });
+                }
+            }
+
+            saveProgress() {
+                localStorage.setItem('flashcardProgress', JSON.stringify(this.progress));
+            }
+
+            getNextCard() {
+                // Weighted selection based on difficulty and time since last review
+                const now = Date.now();
+                const candidates = [];
+
+                Object.keys(this.progress).forEach(index => {
+                    const card = this.progress[index];
+                    const timeSinceReview = now - (card.lastReview || 0);
+                    const daysSinceReview = timeSinceReview / (1000 * 60 * 60 * 24);
+                    
+                    // Weight based on difficulty and time
+                    let weight = card.difficulty;
+                    
+                    // Boost cards that haven't been reviewed
+                    if (!card.lastReview) {
+                        weight *= 3;
+                    }
+                    
+                    // Boost cards due for review
+                    if (now >= card.nextReview) {
+                        weight *= 2;
+                    }
+                    
+                    // Add some randomness
+                    weight *= (1 + Math.random() * 0.5);
+                    
+                    candidates.push({ index: parseInt(index), weight });
+                });
+
+                // Sort by weight (descending) and pick top
+                candidates.sort((a, b) => b.weight - a.weight);
+                return parseInt(candidates[0].index);
+            }
+
+            markCard(cardIndex, correct) {
+                const card = this.progress[cardIndex];
+                
+                if (correct) {
+                    card.correct++;
+                    card.difficulty = Math.max(1, card.difficulty - 0.5);
+                    
+                    // Increase interval based on consecutive correct answers
+                    const interval = Math.pow(2, Math.min(card.correct, 7)); // Max 128 days
+                    card.nextReview = Date.now() + (interval * 24 * 60 * 60 * 1000);
+                } else {
+                    card.wrong++;
+                    card.difficulty = Math.min(5, card.difficulty + 1);
+                    
+                    // Review again soon
+                    card.nextReview = Date.now() + (1 * 60 * 60 * 1000); // 1 hour
+                }
+                
+                card.lastReview = Date.now();
+                this.saveProgress();
+            }
+
+            getStats() {
+                let totalStudied = 0;
+                let totalCorrect = 0;
+                let totalWrong = 0;
+                let mastered = 0;
+
+                Object.values(this.progress).forEach(card => {
+                    const attempts = card.correct + card.wrong;
+                    if (attempts > 0) totalStudied++;
+                    totalCorrect += card.correct;
+                    totalWrong += card.wrong;
+                    
+                    // Mastered = 5+ correct, difficulty <= 2
+                    if (card.correct >= 5 && card.difficulty <= 2) {
+                        mastered++;
+                    }
+                });
+
+                const accuracy = totalCorrect + totalWrong > 0 
+                    ? Math.round((totalCorrect / (totalCorrect + totalWrong)) * 100)
+                    : 0;
+
+                return {
+                    cardsStudied: totalStudied,
+                    accuracy,
+                    mastered,
+                    totalCards: flashcards.length
+                };
+            }
+
+            exportProgress() {
+                const data = {
+                    exportDate: new Date().toISOString(),
+                    progress: this.progress,
+                    stats: this.getStats()
+                };
+                return JSON.stringify(data, null, 2);
+            }
+
+            reset() {
+                if (confirm('Are you sure? This will delete all your progress!')) {
+                    localStorage.removeItem('flashcardProgress');
+                    this.loadProgress();
+                    location.reload();
+                }
+            }
+        }
+
+        // App state
+        let sr = new SpacedRepetition();
+        let currentCardIndex = null;
+        let isFlipped = false;
+
+        // Initialize
+        function init() {
+            updateStats();
+            loadNextCard();
+        }
+
+        function loadNextCard() {
+            currentCardIndex = sr.getNextCard();
+            const card = flashcards[currentCardIndex];
+            const progress = sr.progress[currentCardIndex];
+            
+            // Update UI
+            document.getElementById('categoryBadge').textContent = card.category;
+            document.getElementById('cardFront').textContent = card.front;
+            document.getElementById('cardTerm').textContent = card.term;
+            document.getElementById('cardDetails').textContent = card.details;
+            
+            // Update difficulty indicators
+            updateDifficultyIndicator('difficultyFront', progress.difficulty);
+            updateDifficultyIndicator('difficultyBack', progress.difficulty);
+            
+            // Reset flip state
+            isFlipped = false;
+            document.getElementById('flashcard').classList.remove('flipped');
+            document.getElementById('flipBtn').style.display = 'block';
+            document.getElementById('answerControls').style.display = 'none';
+        }
+
+        function updateDifficultyIndicator(elementId, difficulty) {
+            const container = document.getElementById(elementId);
+            container.innerHTML = '';
+            
+            for (let i = 1; i <= 5; i++) {
+                const dot = document.createElement('div');
+                dot.className = 'difficulty-dot';
+                if (i <= difficulty) {
+                    dot.classList.add('active');
+                }
+                container.appendChild(dot);
+            }
+        }
+
+        function flipCard() {
+            isFlipped = !isFlipped;
+            document.getElementById('flashcard').classList.toggle('flipped');
+            
+            if (isFlipped) {
+                document.getElementById('flipBtn').style.display = 'none';
+                document.getElementById('answerControls').style.display = 'flex';
+            }
+        }
+
+        function markCard(correct) {
+            sr.markCard(currentCardIndex, correct);
+            updateStats();
+            
+            // Load next card after brief delay
+            setTimeout(() => {
+                loadNextCard();
+            }, 300);
+        }
+
+        function updateStats() {
+            const stats = sr.getStats();
+            document.getElementById('cardsStudied').textContent = stats.cardsStudied;
+            document.getElementById('accuracy').textContent = stats.accuracy + '%';
+            document.getElementById('mastered').textContent = stats.mastered;
+            document.getElementById('totalCards').textContent = stats.totalCards;
+            
+            // Update progress bar
+            const progress = (stats.mastered / stats.totalCards) * 100;
+            document.getElementById('progressFill').style.width = progress + '%';
+        }
+
+        function exportProgress() {
+            const data = sr.exportProgress();
+            const blob = new Blob([data], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `sap-c02-progress-${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+        }
+
+        function resetProgress() {
+            sr.reset();
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.key === ' ' || e.key === 'Enter') {
+                e.preventDefault();
+                if (!isFlipped) {
+                    flipCard();
+                }
+            } else if (e.key === 'ArrowLeft' && isFlipped) {
+                markCard(false);
+            } else if (e.key === 'ArrowRight' && isFlipped) {
+                markCard(true);
+            }
+        });
+
+        // Start the app
+        init();
+    </script>
+</body>
+</html>
