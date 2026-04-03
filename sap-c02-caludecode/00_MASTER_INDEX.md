@@ -14,6 +14,8 @@
 5. **Practice with 500+ Questions** — Pattern recognition is key
 6. **Review Well-Architected Framework and DR** — These are cross-cutting topics on every exam
 7. **Use Labs** if you have AWS access — Hands-on reinforces concepts
+8. **READ FILE 23 (Critical Gaps)** — This fills CRITICAL topics missing from the main files (Control Tower, Network Firewall, Elastic Beanstalk, Outposts/Local Zones/Wavelength, EKS vs ECS, Elastic Disaster Recovery, and more)
+9. **Practice with Additional Questions (File 24)** — 70 complex scenario questions with multi-select format and detailed wrong-answer analysis matching real exam difficulty
 
 ---
 
@@ -50,10 +52,14 @@
 | [20_Well_Architected_Framework.md](20_Well_Architected_Framework.md) | All 6 pillars with AWS service mappings | ~2,500 |
 | [21_Disaster_Recovery.md](21_Disaster_Recovery.md) | All 4 DR strategies with complete architectures | ~2,000 |
 | [22_Migration_Patterns.md](22_Migration_Patterns.md) | 6 R's with decision trees and tools | ~2,500 |
+| [23_Critical_Gaps_MUST_READ.md](23_Critical_Gaps_MUST_READ.md) | **MUST READ** — Control Tower, Network Firewall, Beanstalk, AWS Backup, Outposts/Local Zones/Wavelength, EKS vs ECS, Elastic Disaster Recovery, Route 53 ARC, FIS, VPC Lattice, Service Quotas, cross-region replication map | ~5,000 |
+| [24_Additional_Practice_Questions.md](24_Additional_Practice_Questions.md) | 70 complex scenario questions with multi-select format, detailed wrong-answer analysis, real exam difficulty | ~6,000 |
+| [25_Final_Advanced_Topics.md](25_Final_Advanced_Topics.md) | Firewall Manager, S3 MRAP, DynamoDB single-table design, IPv6/EIGW, Accelerated VPN, DLM, Budgets with actions, SSM deep-dive, CUR, MSK | ~4,500 |
+| [26_Professional_Level_Details.md](26_Professional_Level_Details.md) | Professional-level service details: Lambda reserved vs provisioned concurrency, ALB auth, NLB+PrivateLink, DNSSEC, Redshift distribution/sort keys/WLM, TGW appliance mode, API GW endpoint types/VPC Link, CFN CreationPolicy, Step Functions .sync, DX MACsec/BGP/BFD, SQS FIFO high throughput, Kinesis error handling | ~4,500 |
 
 ---
 
-## Total Content: ~85,000+ words across 22 files
+## Total Content: ~110,000+ words across 28 files
 
 ---
 
