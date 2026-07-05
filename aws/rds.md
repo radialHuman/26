@@ -340,7 +340,7 @@ Use case: High-performance, HA applications
 │                                            │
 │  AZ-1a                    AZ-1b            │
 │  ┌──────────┐            ┌──────────┐     │
-│  │ Primary  │ Sync Rep  │ Standby  │     │
+│  │ Primary  │ Sync Rep  b│ Standby  │     │
 │  │ Database │◄──────────►│ Database │     │
 │  └────┬─────┘            └──────────┘     │
 │       │                                    │
