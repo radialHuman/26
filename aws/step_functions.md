@@ -1042,6 +1042,7 @@ User migration (import from legacy system)
 # AWS Step Functions: Workflow Orchestration
 
 ## Table of Contents
+0. [Backgorund](#background)
 1. [Step Functions Fundamentals](#step-functions-fundamentals)
 2. [State Machine Types](#state-machine-types)
 3. [State Types](#state-types)
@@ -1054,6 +1055,228 @@ User migration (import from legacy system)
 
 ---
 
+## Background
+Step Functions is one of the most misunderstood AWS services. Let me explain the problem first.
+
+**The problem it solves:**
+
+You're building an LLM pipeline. User uploads a document. You need to:
+
+1. Validate the document
+2. Extract text from it
+3. Chunk the text
+4. Generate embeddings
+5. Store in vector DB
+6. Send confirmation email
+7. Update status in database
+
+Simple enough. You write it as one Python function:
+
+```python
+def process_document(doc):
+    validate(doc)
+    text = extract_text(doc)
+    chunks = chunk_text(text)
+    embeddings = generate_embeddings(chunks)
+    store_in_vector_db(embeddings)
+    send_email()
+    update_status()
+```
+
+**Now the problems start:**
+
+**Step 3 fails.** Chunking crashed halfway. You retry the whole function from scratch. Now you validate and extract again — wasting time and money on steps that already succeeded.
+
+**Step 5 takes 10 minutes.** Your Lambda times out at 15 minutes. You're cutting it close. Add more steps and you'll breach the limit.
+
+**You need to run steps 3 and 4 in parallel** — chunk the text AND generate a summary simultaneously. How? Threading? Async? Gets messy fast.
+
+**Someone asks "what happened to document 1,847?"** You have no idea. No visibility into where in the pipeline it is, where it failed, what the inputs and outputs were at each step.
+
+**Step 6 fails.** Email service is down. Do you retry just the email? Retry everything? How many times? With what delay?
+
+**You need to wait.** After sending email you need to wait for user to confirm before continuing. How do you pause a Lambda for hours or days waiting for human input?
+
+---
+
+**These are all workflow orchestration problems.**
+
+Retry logic, parallel execution, error handling per step, visibility into state, waiting for external events, timeouts per step. Writing all this yourself in Python is possible but becomes a sprawling mess of state machines, DynamoDB records tracking progress, SQS queues for retries. You end up building an orchestration system instead of your actual product.
+
+---
+
+**The origin story:**
+
+Inside Amazon, this problem existed everywhere. Every team building multi-step processes — order processing, fraud detection, fulfillment pipelines — was solving the same orchestration problem differently. Each team reinventing the same wheel badly.
+
+Amazon looked at their internal order processing system — one of the most battle-tested workflows in existence. Order comes in, payment processed, inventory checked, warehouse notified, shipping arranged, confirmation sent. Each step can fail independently. Steps run in parallel where possible. Some steps wait for external confirmation. The whole thing needs to be auditable.
+
+They took the patterns that made that system reliable and productized them as Step Functions in 2016.
+
+The mental model they chose was state machines — a formal computer science concept from the 1950s. Your workflow is a series of states. You're always in exactly one state. Something happens, you transition to the next state. Well understood, formally verifiable, inherently trackable.
+
+---
+
+**What Step Functions actually is:**
+
+A managed state machine service. You define your workflow as a JSON/visual graph of states and transitions. Step Functions executes it, handles retries, tracks state, provides visibility, handles parallel execution, manages waits.
+
+```json
+{
+  "StartAt": "ValidateDocument",
+  "States": {
+    "ValidateDocument": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:us-east-1:123:function:validate",
+      "Next": "ExtractText",
+      "Retry": [{
+        "ErrorEquals": ["States.ALL"],
+        "IntervalSeconds": 2,
+        "MaxAttempts": 3
+      }]
+    },
+    "ExtractText": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:us-east-1:123:function:extract",
+      "Next": "ParallelProcessing"
+    },
+    "ParallelProcessing": {
+      "Type": "Parallel",
+      "Branches": [
+        {
+          "StartAt": "ChunkText",
+          "States": {
+            "ChunkText": {
+              "Type": "Task",
+              "Resource": "arn:aws:lambda:...:chunk",
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "GenerateSummary",
+          "States": {
+            "GenerateSummary": {
+              "Type": "Task",
+              "Resource": "arn:aws:lambda:...:summarize",
+              "End": true
+            }
+          }
+        }
+      ],
+      "Next": "StoreResults"
+    }
+  }
+}
+```
+
+Each step calls a Lambda, ECS task, or other AWS service. Step Functions manages the flow between them.
+
+---
+
+**What you get for free:**
+
+**Retry per step:**
+Step 3 fails — retry just step 3 with exponential backoff. Steps 1 and 2 already succeeded, not re-run.
+
+**Parallel execution:**
+`Parallel` state type — run multiple branches simultaneously, wait for all to finish, continue.
+
+**Visual execution history:**
+AWS console shows you a visual graph of every execution. Green steps succeeded, red steps failed, yellow steps running. Click any step — see exact input, exact output, exact error, exact timestamp.
+
+**Wait states:**
+`waitForTaskToken` — pause execution indefinitely. Send a token to an external system (email, Slack, API). When that system calls back with the token, execution resumes. Wait for human approval, external webhook, anything.
+
+**Timeouts per step:**
+Each step has its own timeout. Step 2 gets 30 seconds, step 5 gets 10 minutes. Independent of each other.
+
+**Error catching:**
+Catch specific errors per step. If step 4 throws a `VectorDBConnectionError`, go to a different state (maybe try a backup DB). If it throws `InvalidInputError`, go to a failure notification state.
+
+**Execution history:**
+Every execution stored for 90 days. Full audit trail. What input went in, what came out, what failed, when, why.
+
+---
+
+**Two modes — Express vs Standard:**
+
+**Standard workflows:**
+- Runs up to 1 year (yes, year — for very long running processes)
+- Exactly-once execution (each step runs exactly once)
+- Full execution history stored
+- More expensive per state transition
+- For business-critical workflows — order processing, document pipelines
+
+**Express workflows:**
+- Runs up to 5 minutes
+- At-least-once execution (may retry steps)
+- High volume, short duration
+- Much cheaper
+- For high throughput event processing — IoT data, streaming events, real-time processing
+
+---
+
+**For your LLM pipelines specifically:**
+
+Your document processing, RAG pipelines, multi-step LLM workflows — Step Functions fits naturally.
+
+```
+User uploads document
+→ Step Functions execution starts
+→ Step 1: Validate (Lambda, 10 second timeout, retry 3 times)
+→ Step 2: Extract text (Lambda, 2 minute timeout)
+→ Step 3: Parallel
+    → Branch A: Chunk + embed (Lambda → vector DB)
+    → Branch B: Generate summary (LLM call)
+→ Step 4: Store results (RDS update)
+→ Step 5: Wait for user confirmation (waitForTaskToken)
+→ Step 6: Send to downstream system
+→ Done
+```
+
+User asks "what happened to my document?" — you look up the execution ID, see exactly which step it's on, what happened at each step, why it failed if it did.
+
+---
+
+**What Step Functions doesn't solve:**
+
+**It's not a compute service.** It orchestrates other services — Lambda, ECS, Fargate, SQS, SNS. The actual work happens in those services. Step Functions just manages the flow between them.
+
+**It's not cheap at high volume.** Standard workflows charge per state transition. A 10-step workflow running a million times a day gets expensive. Express workflows help but have limitations.
+
+**It's AWS only.** If you ever move off AWS, your workflows need rebuilding. Tools like Temporal (open source, runs anywhere) solve the same problem without vendor lock-in.
+
+---
+
+**Temporal — the open source alternative:**
+
+Worth knowing exists. Same concept — workflow orchestration — but open source, runs in Kubernetes, language-native (write workflows in Python, Go, Java — not JSON).
+
+```python
+# Temporal workflow in Python
+@workflow.defn
+class DocumentPipeline:
+    @workflow.run
+    async def run(self, doc_id: str) -> str:
+        text = await workflow.execute_activity(extract_text, doc_id)
+        chunks = await workflow.execute_activity(chunk_text, text)
+        embeddings = await workflow.execute_activity(embed_chunks, chunks)
+        await workflow.execute_activity(store_embeddings, embeddings)
+        return "done"
+```
+
+Feels like regular Python. Temporal handles the retry, state persistence, visibility under the hood. Many companies use Temporal instead of Step Functions to avoid AWS lock-in.
+
+For your K8s setup — Temporal actually fits better than Step Functions because it runs inside your cluster and isn't AWS-specific.
+
+---
+
+**Bottom line:**
+
+Step Functions solves the "my multi-step process is a mess of retry logic, state tracking, and error handling" problem. It externalizes workflow orchestration away from your application code. Your Lambda/ECS tasks just do one thing each — Step Functions handles the flow, retries, parallelism, visibility, and waits between them. Born from Amazon's own order processing battle scars. If you're building multi-step LLM pipelines and finding the orchestration getting messy — Step Functions or Temporal is the answer.
+
+---
 ## Step Functions Fundamentals
 
 ### What is Step Functions?
