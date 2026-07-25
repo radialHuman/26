@@ -26,6 +26,8 @@ Python is a versatile, high-level programming language known for its readability
 - **Django:** Full-featured web framework
 - **Flask:** Lightweight, flexible web microframework
 - **FastAPI:** Modern, async-first API framework
+- **Hypercorm:** For http 2 and 3
+- **Granian:** Rust based
 - **FastMCP:** High-performance, async backend framework for scalable APIs
 - **Celery:** Distributed task queue
 - **SQLAlchemy:** Database ORM
