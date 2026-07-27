@@ -1,6 +1,6 @@
 # JSON Web Tokens (JWT): Comprehensive Guide
 
-## What is JWT?
+## What is JWT? (deepdive)[https://youtu.be/DPrhem174Ws]
 JWT (JSON Web Token) is a compact, URL-safe means of representing claims to be transferred between two parties. It is widely used for authentication and information exchange in modern web applications.
 
 ### Key Features:
